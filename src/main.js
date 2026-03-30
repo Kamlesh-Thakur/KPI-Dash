@@ -86,6 +86,7 @@ function initNavigation() {
     item.addEventListener('click', () => {
       const tab = item.dataset.tab;
       switchTab(tab);
+      closeMobileDrawer();
     });
   });
 }
@@ -221,11 +222,54 @@ function initExport() {
 }
 
 // ==========================================
-// MENU TOGGLE (mobile)
+// MENU TOGGLE (mobile drawer)
 // ==========================================
+const MOBILE_NAV_MQ = window.matchMedia('(max-width: 768px)');
+
+function isMobileNavLayout() {
+  return MOBILE_NAV_MQ.matches;
+}
+
+function setMobileDrawerOpen(open) {
+  const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  if (!isMobileNavLayout()) {
+    sidebar.classList.remove('open');
+    backdrop.classList.remove('active');
+    backdrop.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('sidebar-open');
+    return;
+  }
+  sidebar.classList.toggle('open', open);
+  backdrop.classList.toggle('active', open);
+  backdrop.setAttribute('aria-hidden', open ? 'false' : 'true');
+  document.body.classList.toggle('sidebar-open', open);
+}
+
+function closeMobileDrawer() {
+  setMobileDrawerOpen(false);
+}
+
 function initMenuToggle() {
-  document.getElementById('menu-toggle').addEventListener('click', () => {
-    document.getElementById('sidebar').classList.toggle('open');
+  const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  const toggle = document.getElementById('menu-toggle');
+  const closeBtn = document.getElementById('sidebar-close');
+
+  toggle.addEventListener('click', () => {
+    setMobileDrawerOpen(!sidebar.classList.contains('open'));
+  });
+  backdrop.addEventListener('click', closeMobileDrawer);
+  closeBtn.addEventListener('click', closeMobileDrawer);
+
+  MOBILE_NAV_MQ.addEventListener('change', (e) => {
+    if (!e.matches) setMobileDrawerOpen(false);
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && isMobileNavLayout() && sidebar.classList.contains('open')) {
+      closeMobileDrawer();
+    }
   });
 }
 
