@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="KPI Dashboard - Operations Analytics & Incident Tracking for Telecom Network" />
+  <title>KPI Dashboard — Operations Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m7 16 4-8 4 4 4-8"/></svg>
+      </div>
+      <span class="brand-text">KPI Analytics</span>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-tab="dashboard" id="nav-dashboard">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <span>Dashboard</span>
+      </button>
+      <button class="nav-item" data-tab="tasks" id="nav-tasks">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 14 2 2 4-4"/></svg>
+        <span>Task Data</span>
+      </button>
+      <button class="nav-item" data-tab="incidents" id="nav-incidents">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span>Incidents</span>
+      </button>
+      <button class="nav-item" data-tab="branch" id="nav-branch">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+        <span>Branch KPI</span>
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="upload-area" id="upload-area">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <span>Import Excel</span>
+        <input type="file" id="file-input" accept=".xlsx,.xls,.csv" hidden />
+      </div>
+      <button class="export-btn" id="export-btn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span>Export</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content" id="main-content">
+    <!-- Header -->
+    <header class="top-header" id="top-header">
+      <div class="header-left">
+        <button class="menu-toggle" id="menu-toggle">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <h1 class="page-title" id="page-title">Dashboard</h1>
+      </div>
+      <div class="header-right">
+        <div class="filter-group" id="filter-group">
+          <select class="filter-select" id="filter-division">
+            <option value="">All Divisions</option>
+          </select>
+          <select class="filter-select" id="filter-region">
+            <option value="">All Regions</option>
+          </select>
+          <select class="filter-select" id="filter-branch">
+            <option value="">All Branches</option>
+          </select>
+          <select class="filter-select" id="filter-task-type">
+            <option value="">All Task Types</option>
+          </select>
+        </div>
+      </div>
+    </header>
+
+    <!-- Dashboard Tab -->
+    <section class="tab-content active" id="tab-dashboard">
+      <div class="kpi-cards" id="kpi-cards"></div>
+      <div class="charts-grid" id="charts-grid">
+        <div class="chart-card chart-large" id="chart-tasks-trend"><div class="chart-loader"></div></div>
+        <div class="chart-card" id="chart-task-type-pie"><div class="chart-loader"></div></div>
+        <div class="chart-card" id="chart-region-bar"><div class="chart-loader"></div></div>
+        <div class="chart-card" id="chart-priority-dist"><div class="chart-loader"></div></div>
+        <div class="chart-card" id="chart-sla-gauge"><div class="chart-loader"></div></div>
+        <div class="chart-card chart-large" id="chart-branch-heatmap"><div class="chart-loader"></div></div>
+      </div>
+    </section>
+
+    <!-- Tasks Tab -->
+    <section class="tab-content" id="tab-tasks">
+      <div class="grid-toolbar" id="tasks-toolbar">
+        <div class="toolbar-left">
+          <input type="text" class="search-input" id="tasks-search" placeholder="Search tasks..." />
+          <span class="row-count" id="tasks-row-count">0 rows</span>
+        </div>
+        <div class="toolbar-right">
+          <button class="toolbar-btn" id="add-task-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Row
+          </button>
+          <button class="toolbar-btn danger" id="delete-task-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            Delete
+          </button>
+        </div>
+      </div>
+      <div class="grid-container" id="tasks-grid"></div>
+    </section>
+
+    <!-- Incidents Tab -->
+    <section class="tab-content" id="tab-incidents">
+      <div class="incidents-dashboard" id="incidents-dashboard">
+        <div class="kpi-cards" id="incident-kpi-cards"></div>
+        <div class="charts-grid">
+          <div class="chart-card chart-large" id="chart-incident-trend"><div class="chart-loader"></div></div>
+          <div class="chart-card" id="chart-incident-category"><div class="chart-loader"></div></div>
+          <div class="chart-card" id="chart-incident-complexity"><div class="chart-loader"></div></div>
+          <div class="chart-card" id="chart-incident-closure"><div class="chart-loader"></div></div>
+        </div>
+      </div>
+      <div class="grid-toolbar" id="incidents-toolbar">
+        <div class="toolbar-left">
+          <input type="text" class="search-input" id="incidents-search" placeholder="Search incidents..." />
+          <span class="row-count" id="incidents-row-count">0 rows</span>
+        </div>
+      </div>
+      <div class="grid-container" id="incidents-grid"></div>
+    </section>
+
+    <!-- Branch KPI Tab -->
+    <section class="tab-content" id="tab-branch">
+      <div class="branch-dashboard" id="branch-dashboard">
+        <div class="charts-grid">
+          <div class="chart-card chart-large" id="chart-branch-performance"><div class="chart-loader"></div></div>
+          <div class="chart-card" id="chart-division-compare"><div class="chart-loader"></div></div>
+          <div class="chart-card" id="chart-same-day-closure"><div class="chart-loader"></div></div>
+          <div class="chart-card chart-large" id="chart-branch-tasks-volume"><div class="chart-loader"></div></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

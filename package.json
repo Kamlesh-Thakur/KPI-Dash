@@ -1,0 +1,19 @@
+{
+  "name": "kpi-dashboard",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  },
+  "dependencies": {
+    "xlsx": "^0.18.5",
+    "echarts": "^5.5.0",
+    "ag-grid-community": "^32.0.0"
+  }
+}
