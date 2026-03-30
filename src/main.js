@@ -1,5 +1,5 @@
 /**
- * KPI Dashboard — Main Application Entry
+ * KPI Dashboard — Main Application Entries
  */
 import './style.css';
 import * as XLSX from 'xlsx';
