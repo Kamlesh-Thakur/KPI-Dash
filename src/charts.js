@@ -848,19 +848,28 @@ export function renderIncidentClosure(containerId) {
 export function renderBranchPerformance(containerId) {
   const { chart, titleEl } = getOrCreate(containerId) || {};
   if (!chart) return;
-  setTitle(titleEl, 'Branch Performance — Tasks & Same-Day Closure %', 'blue');
+  setTitle(titleEl, 'Branch Performance — Tasks, Closure %, 4h & 24h', 'blue');
 
   const data = getFilteredRawData();
   const branchMap = {};
   data.forEach(r => {
     const b = r['Branch'] || 'N/A';
-    if (!branchMap[b]) branchMap[b] = { total: 0, sameDay: 0 };
+    if (!branchMap[b]) branchMap[b] = { total: 0, sameDay: 0, within4h: 0, within24h: 0 };
     branchMap[b].total++;
     if (r['Same day Closure'] === true) branchMap[b].sameDay++;
+    const durHours = (parseFloat(r['Duration']) || 0) * 24;
+    if (durHours <= 4) branchMap[b].within4h++;
+    if (durHours <= 24) branchMap[b].within24h++;
   });
 
   const sorted = Object.entries(branchMap)
-    .map(([name, v]) => ({ name, total: v.total, rate: v.total > 0 ? Math.round((v.sameDay / v.total) * 100) : 0 }))
+    .map(([name, v]) => ({
+      name,
+      total: v.total,
+      rate: v.total > 0 ? Math.round((v.sameDay / v.total) * 100) : 0,
+      within4h: v.within4h,
+      within24h: v.within24h
+    }))
     .sort((a, b) => b.total - a.total)
     .slice(0, 20);
 
@@ -873,7 +882,7 @@ export function renderBranchPerformance(containerId) {
       axisPointer: { type: 'shadow' }
     },
     legend: {
-      data: ['Tasks', 'Same Day %'],
+      data: ['Tasks', 'Same Day %', 'Closed <= 4h', 'Closed <= 24h'],
       textStyle: { color: '#94a3b8', fontSize: 11 },
       top: 0
     },
@@ -895,7 +904,7 @@ export function renderBranchPerformance(containerId) {
       },
       {
         type: 'value',
-        name: '%',
+        name: 'Closure %',
         max: 100,
         nameTextStyle: { color: '#64748b', fontSize: 10 },
         splitLine: { show: false },
@@ -924,8 +933,28 @@ export function renderBranchPerformance(containerId) {
         smooth: true,
         symbol: 'circle',
         symbolSize: 6,
-        lineStyle: { color: COLORS.green, width: 2 },
-        itemStyle: { color: COLORS.green }
+        lineStyle: { color: COLORS.purple, width: 2 },
+        itemStyle: { color: COLORS.purple }
+      },
+      {
+        name: 'Closed <= 4h',
+        type: 'line',
+        data: sorted.map(s => s.within4h),
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 5,
+        lineStyle: { color: COLORS.amber, width: 2 },
+        itemStyle: { color: COLORS.amber }
+      },
+      {
+        name: 'Closed <= 24h',
+        type: 'line',
+        data: sorted.map(s => s.within24h),
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 5,
+        lineStyle: { color: COLORS.red, width: 2 },
+        itemStyle: { color: COLORS.red }
       }
     ],
     animationDuration: 1200
