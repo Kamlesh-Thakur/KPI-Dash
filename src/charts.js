@@ -1081,19 +1081,45 @@ export function renderDivisionCompare(containerId) {
 export function renderSameDayClosure(containerId) {
   const { chart, titleEl } = getOrCreate(containerId) || {};
   if (!chart) return;
-  setTitle(titleEl, 'Closure by Day of Week', 'amber');
+  setTitle(titleEl, 'Weekday Open/New/Same-Day/Open Next Day', 'amber');
 
   const data = getFilteredRawData();
-  const dayMap = {};
-  const dayOrder = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  dayOrder.forEach(d => { dayMap[d] = { total: 0, sameDay: 0 }; });
+  const assignedByDate = {};
+  data.forEach((r) => {
+    const assignedDate = excelDateToJS(r['Assigned date'] ?? r['Task Assigned'] ?? r['Task Created']);
+    if (!assignedDate || Number.isNaN(assignedDate.getTime())) return;
+    const key = assignedDate.toISOString().slice(0, 10);
+    if (!assignedByDate[key]) assignedByDate[key] = { assigned: 0, sameDay: 0 };
+    assignedByDate[key].assigned += 1;
+    if (r['Same day Closure'] === true) assignedByDate[key].sameDay += 1;
+  });
 
-  data.forEach(r => {
-    const day = r['Completed Day'];
-    if (day && dayMap[day]) {
-      dayMap[day].total++;
-      if (r['Same day Closure'] === true) dayMap[day].sameDay++;
-    }
+  const dates = Object.keys(assignedByDate).sort((a, b) => a.localeCompare(b));
+  const dayOrder = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const weekdayTotals = dayOrder.map(() => ({ assigned: 0, sameDay: 0 }));
+
+  dates.forEach((dateKey) => {
+    const weekdayIdx = new Date(dateKey).getDay();
+    weekdayTotals[weekdayIdx].assigned += assignedByDate[dateKey].assigned;
+    weekdayTotals[weekdayIdx].sameDay += assignedByDate[dateKey].sameDay;
+  });
+
+  const weekdayFlow = dayOrder.map(() => ({
+    opening: 0,
+    assigned: 0,
+    sameDay: 0,
+    nextOpen: 0
+  }));
+  let carryOpen = 0; // Sunday Open(start) must be 0
+  dayOrder.forEach((_, idx) => {
+    const assigned = weekdayTotals[idx].assigned;
+    const sameDayClosed = weekdayTotals[idx].sameDay;
+    const nextOpen = Math.max(carryOpen + assigned - sameDayClosed, 0);
+    weekdayFlow[idx].opening = carryOpen;
+    weekdayFlow[idx].assigned = assigned;
+    weekdayFlow[idx].sameDay = sameDayClosed;
+    weekdayFlow[idx].nextOpen = nextOpen;
+    carryOpen = nextOpen;
   });
 
   chart.setOption({
@@ -1105,14 +1131,14 @@ export function renderSameDayClosure(containerId) {
       axisPointer: { type: 'shadow' }
     },
     legend: {
-      data: ['Total', 'Same Day'],
+      data: ['Open (start)', 'New', 'Same Day Closure', 'Open (next day)'],
       textStyle: { color: '#94a3b8', fontSize: 11 },
       top: 0
     },
-    grid: { left: 50, right: 20, top: 35, bottom: 30 },
+    grid: { left: 50, right: 20, top: 35, bottom: 48 },
     xAxis: {
       type: 'category',
-      data: dayOrder.map(d => d.slice(0, 3)),
+      data: dayOrder,
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
       axisLabel: { color: '#94a3b8', fontSize: 11 },
       axisTick: { show: false }
@@ -1124,18 +1150,32 @@ export function renderSameDayClosure(containerId) {
     },
     series: [
       {
-        name: 'Total',
+        name: 'Open (start)',
         type: 'bar',
-        data: dayOrder.map(d => dayMap[d].total),
-        barWidth: 20,
+        data: weekdayFlow.map(d => d.opening),
+        barWidth: 14,
+        itemStyle: { borderRadius: [4, 4, 0, 0], color: COLORS.purple }
+      },
+      {
+        name: 'New',
+        type: 'bar',
+        data: weekdayFlow.map(d => d.assigned),
+        barWidth: 14,
         itemStyle: { borderRadius: [4, 4, 0, 0], color: COLORS.blue }
       },
       {
-        name: 'Same Day',
+        name: 'Same Day Closure',
         type: 'bar',
-        data: dayOrder.map(d => dayMap[d].sameDay),
-        barWidth: 20,
+        data: weekdayFlow.map(d => d.sameDay),
+        barWidth: 14,
         itemStyle: { borderRadius: [4, 4, 0, 0], color: COLORS.green }
+      },
+      {
+        name: 'Open (next day)',
+        type: 'bar',
+        data: weekdayFlow.map(d => d.nextOpen),
+        barWidth: 14,
+        itemStyle: { borderRadius: [4, 4, 0, 0], color: COLORS.amber }
       }
     ],
     animationDuration: 1000
