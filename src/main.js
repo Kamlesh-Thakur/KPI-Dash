@@ -79,6 +79,9 @@ function processExcelBuffer(buf) {
   dataLoaded = true;
   populateFilters();
   renderAll();
+  // Ensure charts pick up final layout sizes after first render
+  setTimeout(() => resizeCharts(), 50);
+  setTimeout(() => resizeCharts(), 250);
   showToast(`Data loaded: ${formatNumber(getFilteredRawData().length)} tasks, ${formatNumber(getFilteredIncidentData().length)} incidents`, 'success');
 }
 
@@ -487,6 +490,8 @@ function renderAll() {
   renderKPICards();
   renderIncidentKPICards();
   renderTabContent(currentTab);
+  // Charts may be initialized before layout settles; force a resize.
+  setTimeout(() => resizeCharts(), 50);
 }
 
 function renderTabContent(tab) {
@@ -524,6 +529,7 @@ function renderTabContent(tab) {
 // ==========================================
 function renderKPICards() {
   const data = getFilteredRawData();
+  const incidentData = getFilteredIncidentData();
   const container = document.getElementById('kpi-cards');
 
   const total = data.length;
@@ -531,6 +537,12 @@ function renderKPICards() {
   const sameDayRate = total > 0 ? Math.round((sameDay / total) * 100) : 0;
   const avgDuration = total > 0 ? (data.reduce((sum, r) => sum + (parseFloat(r['Duration']) || 0), 0) / total) : 0;
   const taskTypes = new Set(data.map(r => r['Task Type'])).size;
+  const incidentTotal = incidentData.length;
+  const incidentSameDay = incidentData.filter(r => r['Same day Closure'] === true).length;
+  const incidentSameDayRate = incidentTotal > 0 ? Math.round((incidentSameDay / incidentTotal) * 100) : 0;
+  const incidentAvgDuration = incidentTotal > 0
+    ? (incidentData.reduce((sum, r) => sum + (parseFloat(r['Duration']) || 0), 0) / incidentTotal)
+    : 0;
 
   container.innerHTML = `
     <div class="kpi-card blue">
@@ -552,6 +564,16 @@ function renderKPICards() {
       <div class="kpi-label">Incidents</div>
       <div class="kpi-value">${formatNumber(getFilteredIncidentData().length)}</div>
       <div class="kpi-change">fiber network</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">Incident Same-Day Closure</div>
+      <div class="kpi-value">${incidentSameDayRate}%</div>
+      <div class="kpi-change up">${formatNumber(incidentSameDay)} of ${formatNumber(incidentTotal)}</div>
+    </div>
+    <div class="kpi-card amber">
+      <div class="kpi-label">Incident Avg Duration</div>
+      <div class="kpi-value">${formatDuration(incidentAvgDuration)}</div>
+      <div class="kpi-change">per incident</div>
     </div>
   `;
 }
