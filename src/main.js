@@ -37,6 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   initNavigation();
   initFilters();
+  initDateFilters();
   initUpload();
   initExport();
   initMenuToggle();
@@ -139,6 +140,115 @@ function initFilters() {
       renderAll();
     });
   });
+}
+
+function initDateFilters() {
+  const modeEl = document.getElementById('filter-date-mode');
+  const anchorEl = document.getElementById('filter-date-anchor');
+  const weekEl = document.getElementById('filter-date-week');
+  const monthEl = document.getElementById('filter-date-month');
+  const fromEl = document.getElementById('filter-date-from');
+  const toEl = document.getElementById('filter-date-to');
+  const separatorEl = document.getElementById('date-separator');
+
+  if (!modeEl || !anchorEl || !weekEl || !monthEl || !fromEl || !toEl || !separatorEl) return;
+
+  const today = new Date();
+  const todayText = [
+    today.getFullYear(),
+    String(today.getMonth() + 1).padStart(2, '0'),
+    String(today.getDate()).padStart(2, '0')
+  ].join('-');
+
+  anchorEl.value = todayText;
+  weekEl.value = toISOWeek(today);
+  monthEl.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  setFilter('dateMode', modeEl.value);
+  setFilter('dateAnchor', anchorEl.value);
+
+  const syncDateInputs = () => {
+    const mode = modeEl.value;
+    const showAnchor = mode === 'daily';
+    const showWeek = mode === 'weekly';
+    const showMonth = mode === 'monthly';
+    const showRange = mode === 'custom';
+
+    anchorEl.classList.toggle('visible', showAnchor);
+    weekEl.classList.toggle('visible', showWeek);
+    monthEl.classList.toggle('visible', showMonth);
+    fromEl.classList.toggle('visible', showRange);
+    toEl.classList.toggle('visible', showRange);
+    separatorEl.classList.toggle('visible', showRange);
+  };
+
+  syncDateInputs();
+
+  modeEl.addEventListener('change', (e) => {
+    const mode = e.target.value;
+    setFilter('dateMode', mode);
+    if (mode === 'daily') {
+      setFilter('dateAnchor', anchorEl.value);
+    } else if (mode === 'weekly') {
+      setFilter('dateAnchor', isoWeekToDate(weekEl.value));
+    } else if (mode === 'monthly') {
+      setFilter('dateAnchor', monthToDate(monthEl.value));
+    }
+    syncDateInputs();
+    renderAll();
+  });
+
+  anchorEl.addEventListener('change', (e) => {
+    setFilter('dateAnchor', e.target.value);
+    renderAll();
+  });
+
+  weekEl.addEventListener('change', (e) => {
+    setFilter('dateAnchor', isoWeekToDate(e.target.value));
+    renderAll();
+  });
+
+  monthEl.addEventListener('change', (e) => {
+    setFilter('dateAnchor', monthToDate(e.target.value));
+    renderAll();
+  });
+
+  fromEl.addEventListener('change', (e) => {
+    setFilter('dateFrom', e.target.value);
+    renderAll();
+  });
+
+  toEl.addEventListener('change', (e) => {
+    setFilter('dateTo', e.target.value);
+    renderAll();
+  });
+}
+
+function toISOWeek(date) {
+  const dt = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = dt.getUTCDay() || 7;
+  dt.setUTCDate(dt.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(dt.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil((((dt - yearStart) / 86400000) + 1) / 7);
+  return `${dt.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+}
+
+function isoWeekToDate(weekValue) {
+  const match = /^(\d{4})-W(\d{2})$/.exec(weekValue || '');
+  if (!match) return '';
+  const year = Number(match[1]);
+  const week = Number(match[2]);
+  const jan4 = new Date(year, 0, 4);
+  const jan4Day = jan4.getDay() || 7;
+  const mondayWeek1 = new Date(year, 0, 4 - (jan4Day - 1));
+  const mondayTarget = new Date(mondayWeek1);
+  mondayTarget.setDate(mondayWeek1.getDate() + (week - 1) * 7);
+  return `${mondayTarget.getFullYear()}-${String(mondayTarget.getMonth() + 1).padStart(2, '0')}-${String(mondayTarget.getDate()).padStart(2, '0')}`;
+}
+
+function monthToDate(monthValue) {
+  const match = /^(\d{4})-(\d{2})$/.exec(monthValue || '');
+  if (!match) return '';
+  return `${match[1]}-${match[2]}-01`;
 }
 
 function populateFilters() {
@@ -371,9 +481,7 @@ function renderKPICards() {
   const sameDay = data.filter(r => r['Same day Closure'] === true).length;
   const sameDayRate = total > 0 ? Math.round((sameDay / total) * 100) : 0;
   const avgDuration = total > 0 ? (data.reduce((sum, r) => sum + (parseFloat(r['Duration']) || 0), 0) / total) : 0;
-  const uniqueBranches = new Set(data.map(r => r['Branch'])).size;
   const taskTypes = new Set(data.map(r => r['Task Type'])).size;
-  const escalated = data.filter(r => r['Priority Escalated'] === 'Y').length;
 
   container.innerHTML = `
     <div class="kpi-card blue">
@@ -390,21 +498,6 @@ function renderKPICards() {
       <div class="kpi-label">Avg Duration</div>
       <div class="kpi-value">${formatDuration(avgDuration)}</div>
       <div class="kpi-change">per task</div>
-    </div>
-    <div class="kpi-card cyan">
-      <div class="kpi-label">Active Branches</div>
-      <div class="kpi-value">${uniqueBranches}</div>
-      <div class="kpi-change">across all regions</div>
-    </div>
-    <div class="kpi-card red">
-      <div class="kpi-label">Escalated</div>
-      <div class="kpi-value">${formatNumber(escalated)}</div>
-      <div class="kpi-change down">${total > 0 ? Math.round((escalated / total) * 100) : 0}% escalation rate</div>
-    </div>
-    <div class="kpi-card purple">
-      <div class="kpi-label">Incidents</div>
-      <div class="kpi-value">${formatNumber(getFilteredIncidentData().length)}</div>
-      <div class="kpi-change">fiber network</div>
     </div>
   `;
 }

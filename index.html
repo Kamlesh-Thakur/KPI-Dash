@@ -69,6 +69,21 @@
           <span class="theme-toggle-icon" id="theme-toggle-icon" aria-hidden="true">🌙</span>
           <span class="theme-toggle-label" id="theme-toggle-label">Dark</span>
         </button>
+        <div class="date-filter-group" id="date-filter-group">
+          <select class="filter-select" id="filter-date-mode" aria-label="Date filter mode">
+            <option value="overall">Overall</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+            <option value="custom">Custom Range</option>
+          </select>
+          <input class="date-input" id="filter-date-anchor" type="date" aria-label="Reference date" />
+          <input class="date-input" id="filter-date-week" type="week" aria-label="Week picker" />
+          <input class="date-input" id="filter-date-month" type="month" aria-label="Month picker" />
+          <input class="date-input" id="filter-date-from" type="date" aria-label="Start date" />
+          <span class="date-separator" id="date-separator">to</span>
+          <input class="date-input" id="filter-date-to" type="date" aria-label="End date" />
+        </div>
         <div class="filter-group" id="filter-group">
           <select class="filter-select" id="filter-division">
             <option value="">All Divisions</option>

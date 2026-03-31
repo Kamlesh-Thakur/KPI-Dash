@@ -11,7 +11,11 @@ const STATE = {
     division: '',
     region: '',
     branch: '',
-    taskType: ''
+    taskType: '',
+    dateMode: 'overall',
+    dateAnchor: '',
+    dateFrom: '',
+    dateTo: ''
   }
 };
 
@@ -61,6 +65,72 @@ function cleanRow(row) {
     cleaned[cleanKey(key)] = val;
   }
   return cleaned;
+}
+
+function toDateOnly(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return null;
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function parseDateInput(value) {
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return toDateOnly(parsed);
+}
+
+function getRowDate(row) {
+  const dateFields = ['Completed date', 'Task Completed', 'Task Assigned', 'Task Created'];
+  for (const field of dateFields) {
+    const value = row[field];
+    if (typeof value === 'number') {
+      const d = excelDateToJS(value);
+      const dateOnly = toDateOnly(d);
+      if (dateOnly) return dateOnly;
+    } else if (value instanceof Date) {
+      const dateOnly = toDateOnly(value);
+      if (dateOnly) return dateOnly;
+    } else if (typeof value === 'string' && value.trim() !== '') {
+      const parsed = parseDateInput(value);
+      if (parsed) return parsed;
+    }
+  }
+  return null;
+}
+
+function isWithinDateFilter(rowDate, filters) {
+  const mode = filters.dateMode || 'overall';
+  if (mode === 'overall') return true;
+  if (!rowDate) return false;
+
+  if (mode === 'custom') {
+    const from = parseDateInput(filters.dateFrom);
+    const to = parseDateInput(filters.dateTo);
+    if (!from || !to) return true;
+    return rowDate >= from && rowDate <= to;
+  }
+
+  const anchor = parseDateInput(filters.dateAnchor) || toDateOnly(new Date());
+  if (!anchor) return true;
+
+  if (mode === 'daily') {
+    return rowDate.getTime() === anchor.getTime();
+  }
+
+  if (mode === 'weekly') {
+    const start = new Date(anchor);
+    const day = start.getDay() || 7;
+    start.setDate(start.getDate() - (day - 1));
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    return rowDate >= start && rowDate <= end;
+  }
+
+  if (mode === 'monthly') {
+    return rowDate.getFullYear() === anchor.getFullYear() && rowDate.getMonth() === anchor.getMonth();
+  }
+
+  return true;
 }
 
 /** Load data from parsed XLSX sheets */
@@ -113,6 +183,7 @@ export function getFilteredRawData() {
   if (f.taskType) {
     data = data.filter(r => r['Task Type'] === f.taskType);
   }
+  data = data.filter(r => isWithinDateFilter(getRowDate(r), f));
   return data;
 }
 
@@ -130,6 +201,7 @@ export function getFilteredIncidentData() {
   if (f.branch) {
     data = data.filter(r => (r['Branch_1'] || r['Branch']) === f.branch);
   }
+  data = data.filter(r => isWithinDateFilter(getRowDate(r), f));
   return data;
 }
 

@@ -362,6 +362,39 @@ body {
   flex-wrap: wrap;
 }
 
+.date-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.date-input {
+  display: none;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-primary);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-family: inherit;
+}
+
+.date-input.visible {
+  display: inline-flex;
+}
+
+.date-separator {
+  display: none;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.date-separator.visible {
+  display: inline-flex;
+}
+
 .filter-select {
   padding: 8px 14px;
   border-radius: var(--radius-sm);
@@ -799,6 +832,9 @@ body.theme-light .ag-theme-custom {
     display: block;
   }
   .filter-group {
+    display: none;
+  }
+  .date-filter-group {
     display: none;
   }
   .kpi-cards {
