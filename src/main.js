@@ -17,7 +17,7 @@ import {
   renderTaskKPIBars,
   renderIncidentTrend, renderIncidentCategory,
   renderIncidentComplexity, renderIncidentClosure,
-  renderBranchPerformance, renderDivisionCompare,
+  renderBranchPerformance, renderBranchClosureRates, renderDivisionCompare,
   renderSameDayClosure, renderBranchTasksVolume,
   resizeCharts
 } from './charts.js';
@@ -517,6 +517,7 @@ function renderTabContent(tab) {
       break;
     case 'branch':
       renderBranchPerformance('chart-branch-performance');
+      renderBranchClosureRates('chart-branch-closure-rates');
       renderDivisionCompare('chart-division-compare');
       renderSameDayClosure('chart-same-day-closure');
       renderBranchTasksVolume('chart-branch-tasks-volume');

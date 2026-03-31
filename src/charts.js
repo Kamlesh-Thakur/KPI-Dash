@@ -848,30 +848,9 @@ export function renderIncidentClosure(containerId) {
 export function renderBranchPerformance(containerId) {
   const { chart, titleEl } = getOrCreate(containerId) || {};
   if (!chart) return;
-  setTitle(titleEl, 'Branch Performance — Tasks, Closure %, 4h & 24h', 'blue');
+  setTitle(titleEl, 'Branch Performance — Task & Closure Counts', 'blue');
 
-  const data = getFilteredRawData();
-  const branchMap = {};
-  data.forEach(r => {
-    const b = r['Branch'] || 'N/A';
-    if (!branchMap[b]) branchMap[b] = { total: 0, sameDay: 0, within4h: 0, within24h: 0 };
-    branchMap[b].total++;
-    if (r['Same day Closure'] === true) branchMap[b].sameDay++;
-    const durHours = (parseFloat(r['Duration']) || 0) * 24;
-    if (durHours <= 4) branchMap[b].within4h++;
-    if (durHours <= 24) branchMap[b].within24h++;
-  });
-
-  const sorted = Object.entries(branchMap)
-    .map(([name, v]) => ({
-      name,
-      total: v.total,
-      rate: v.total > 0 ? Math.round((v.sameDay / v.total) * 100) : 0,
-      within4h: v.within4h,
-      within24h: v.within24h
-    }))
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 20);
+  const sorted = getBranchClosureStats();
 
   chart.setOption({
     tooltip: {
@@ -882,11 +861,11 @@ export function renderBranchPerformance(containerId) {
       axisPointer: { type: 'shadow' }
     },
     legend: {
-      data: ['Tasks', 'Same Day %', 'Closed <= 4h', 'Closed <= 24h'],
+      data: ['Tasks', 'Same Day (count)', 'Closed <= 4h', 'Closed <= 24h'],
       textStyle: { color: '#94a3b8', fontSize: 11 },
       top: 0
     },
-    grid: { left: 90, right: 50, top: 35, bottom: 40 },
+    grid: { left: 70, right: 30, top: 35, bottom: 40 },
     xAxis: {
       type: 'category',
       data: sorted.map(s => s.name),
@@ -894,23 +873,13 @@ export function renderBranchPerformance(containerId) {
       axisLabel: { color: '#94a3b8', fontSize: 10, rotate: 40 },
       axisTick: { show: false }
     },
-    yAxis: [
-      {
-        type: 'value',
-        name: 'Tasks',
-        nameTextStyle: { color: '#64748b', fontSize: 10 },
-        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-        axisLabel: { color: '#64748b', fontSize: 10 }
-      },
-      {
-        type: 'value',
-        name: 'Closure %',
-        max: 100,
-        nameTextStyle: { color: '#64748b', fontSize: 10 },
-        splitLine: { show: false },
-        axisLabel: { color: '#64748b', fontSize: 10, formatter: '{value}%' }
-      }
-    ],
+    yAxis: {
+      type: 'value',
+      name: 'Tasks',
+      nameTextStyle: { color: '#64748b', fontSize: 10 },
+      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
+      axisLabel: { color: '#64748b', fontSize: 10 }
+    },
     series: [
       {
         name: 'Tasks',
@@ -926,10 +895,9 @@ export function renderBranchPerformance(containerId) {
         }
       },
       {
-        name: 'Same Day %',
+        name: 'Same Day (count)',
         type: 'line',
-        yAxisIndex: 1,
-        data: sorted.map(s => s.rate),
+        data: sorted.map(s => s.sameDay),
         smooth: true,
         symbol: 'circle',
         symbolSize: 6,
@@ -959,6 +927,107 @@ export function renderBranchPerformance(containerId) {
     ],
     animationDuration: 1200
   });
+}
+
+export function renderBranchClosureRates(containerId) {
+  const { chart, titleEl } = getOrCreate(containerId) || {};
+  if (!chart) return;
+  setTitle(titleEl, 'Branch Closure Rates (%) — Same Day, 4h, 24h', 'green');
+
+  const sorted = getBranchClosureStats();
+
+  chart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(17,24,39,0.95)',
+      borderColor: 'rgba(255,255,255,0.08)',
+      textStyle: { color: '#f1f5f9', fontSize: 12 }
+    },
+    legend: {
+      data: ['Same Day %', 'Closed <= 4h %', 'Closed <= 24h %'],
+      textStyle: { color: '#94a3b8', fontSize: 11 },
+      top: 0
+    },
+    grid: { left: 70, right: 30, top: 35, bottom: 40 },
+    xAxis: {
+      type: 'category',
+      data: sorted.map(s => s.name),
+      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+      axisLabel: { color: '#94a3b8', fontSize: 10, rotate: 40 },
+      axisTick: { show: false }
+    },
+    yAxis: {
+      type: 'value',
+      min: 0,
+      max: 100,
+      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
+      axisLabel: { color: '#64748b', fontSize: 10, formatter: '{value}%' }
+    },
+    series: [
+      {
+        name: 'Same Day %',
+        type: 'line',
+        data: sorted.map(s => s.rate),
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 6,
+        lineStyle: { color: COLORS.purple, width: 2 },
+        itemStyle: { color: COLORS.purple }
+      },
+      {
+        name: 'Closed <= 4h %',
+        type: 'line',
+        data: sorted.map(s => s.within4hRate),
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 5,
+        lineStyle: { color: COLORS.amber, width: 2 },
+        itemStyle: { color: COLORS.amber }
+      },
+      {
+        name: 'Closed <= 24h %',
+        type: 'line',
+        data: sorted.map(s => s.within24hRate),
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 5,
+        lineStyle: { color: COLORS.red, width: 2 },
+        itemStyle: { color: COLORS.red }
+      }
+    ],
+    animationDuration: 1200
+  });
+}
+
+function getBranchClosureStats() {
+  const data = getFilteredRawData();
+  const branchMap = {};
+  data.forEach(r => {
+    const b = r['Branch'] || 'N/A';
+    if (!branchMap[b]) branchMap[b] = { total: 0, sameDay: 0, within4h: 0, within24h: 0 };
+    branchMap[b].total++;
+    if (r['Same day Closure'] === true) branchMap[b].sameDay++;
+    const durationValue = parseFloat(r['Duration']);
+    if (!Number.isNaN(durationValue)) {
+      const durHours = durationValue * 24;
+      if (durHours <= 4) branchMap[b].within4h++;
+      if (durHours <= 24) branchMap[b].within24h++;
+    }
+  });
+
+  return Object.entries(branchMap)
+    .map(([name, v]) => ({
+      name,
+      total: v.total,
+      sameDay: v.sameDay,
+      within4h: v.within4h,
+      within24h: v.within24h,
+      rate: v.total > 0 ? Math.round((v.sameDay / v.total) * 100) : 0,
+      within4hRate: v.total > 0 ? Math.round((v.within4h / v.total) * 100) : 0,
+      within24hRate: v.total > 0 ? Math.round((v.within24h / v.total) * 100) : 0
+    }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 20);
 }
 
 export function renderDivisionCompare(containerId) {
