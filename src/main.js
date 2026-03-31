@@ -14,6 +14,7 @@ import {
 import {
   renderTasksTrend, renderTaskTypePie, renderRegionBar,
   renderPriorityDist, renderSLAGauge, renderBranchHeatmap,
+  renderTaskKPIBars,
   renderIncidentTrend, renderIncidentCategory,
   renderIncidentComplexity, renderIncidentClosure,
   renderBranchPerformance, renderDivisionCompare,
@@ -35,6 +36,7 @@ let currentTheme = localStorage.getItem('kpi-theme') || 'dark';
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
+  initSidebarCollapse();
   initNavigation();
   initFilters();
   initDateFilters();
@@ -339,6 +341,7 @@ function initExport() {
 // MENU TOGGLE (mobile drawer)
 // ==========================================
 const MOBILE_NAV_MQ = window.matchMedia('(max-width: 768px)');
+const SIDEBAR_COLLAPSE_KEY = 'kpi-sidebar-collapsed';
 
 function isMobileNavLayout() {
   return MOBILE_NAV_MQ.matches;
@@ -387,6 +390,46 @@ function initMenuToggle() {
   });
 }
 
+function setSidebarCollapsed(collapsed) {
+  if (isMobileNavLayout()) {
+    document.body.classList.remove('sidebar-collapsed');
+    setTimeout(() => resizeCharts(), 0);
+    return;
+  }
+  document.body.classList.toggle('sidebar-collapsed', collapsed);
+  localStorage.setItem(SIDEBAR_COLLAPSE_KEY, collapsed ? '1' : '0');
+  const collapseBtn = document.getElementById('sidebar-collapse-toggle');
+  if (collapseBtn) {
+    collapseBtn.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
+    collapseBtn.setAttribute('title', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
+  }
+  // Resize immediately and after CSS transition so charts use full width.
+  setTimeout(() => resizeCharts(), 0);
+  setTimeout(() => resizeCharts(), 420);
+}
+
+function initSidebarCollapse() {
+  const collapseBtn = document.getElementById('sidebar-collapse-toggle');
+  if (!collapseBtn) return;
+
+  const initialCollapsed = localStorage.getItem(SIDEBAR_COLLAPSE_KEY) === '1';
+  setSidebarCollapsed(initialCollapsed);
+
+  collapseBtn.addEventListener('click', () => {
+    const collapsed = !document.body.classList.contains('sidebar-collapsed');
+    setSidebarCollapsed(collapsed);
+  });
+
+  MOBILE_NAV_MQ.addEventListener('change', (e) => {
+    if (e.matches) {
+      document.body.classList.remove('sidebar-collapsed');
+    } else {
+      const persisted = localStorage.getItem(SIDEBAR_COLLAPSE_KEY) === '1';
+      setSidebarCollapsed(persisted);
+    }
+  });
+}
+
 // ==========================================
 // THEME
 // ==========================================
@@ -408,6 +451,9 @@ function applyTheme(theme) {
   localStorage.setItem('kpi-theme', currentTheme);
   updateThemeToggleUI();
   updateGridThemes();
+  if (dataLoaded) {
+    renderTabContent(currentTab);
+  }
   resizeCharts();
 }
 
@@ -452,6 +498,7 @@ function renderTabContent(tab) {
       renderPriorityDist('chart-priority-dist');
       renderSLAGauge('chart-sla-gauge');
       renderBranchHeatmap('chart-branch-heatmap');
+      renderTaskKPIBars('chart-task-kpi-bars');
       break;
     case 'tasks':
       renderTasksGrid();

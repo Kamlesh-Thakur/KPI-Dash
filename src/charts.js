@@ -171,6 +171,92 @@ export function renderTaskTypePie(containerId) {
   if (!chart) return;
   setTitle(titleEl, 'Task KPI Matrix', 'purple');
 
+  const { rows, metrics } = buildTaskKPIRows();
+  const normalizedData = [];
+  metrics.forEach((metric, metricIndex) => {
+    const values = rows.map(r => Number(r[metric.key]) || 0);
+    const min = Math.min(...values, 0);
+    const max = Math.max(...values, 1);
+    const range = max - min || 1;
+    rows.forEach((row, rowIndex) => {
+      const rawValue = Number(row[metric.key]) || 0;
+      const normalized = (rawValue - min) / range;
+      normalizedData.push([metricIndex, rowIndex, normalized, rawValue, metric.kind]);
+    });
+  });
+
+  const formatValue = (rawValue, kind) => {
+    if (kind === 'pct') return `${(rawValue * 100).toFixed(1)}%`;
+    if (kind === 'number' && rawValue >= 1000) return rawValue.toLocaleString('en-US');
+    return Number(rawValue.toFixed(2)).toString();
+  };
+
+  chart.setOption({
+    tooltip: {
+      position: 'top',
+      backgroundColor: 'rgba(17,24,39,0.95)',
+      borderColor: 'rgba(255,255,255,0.08)',
+      textStyle: { color: '#f1f5f9', fontSize: 12 },
+      formatter: (p) => {
+        const row = rows[p.data[1]];
+        const metric = metrics[p.data[0]];
+        return `${row.task}<br/>${metric.label}: ${formatValue(p.data[3], p.data[4])}`;
+      }
+    },
+    grid: { left:100,right: 20, top: 50, bottom: 58 },
+    xAxis: {
+      type: 'category',
+      data: metrics.map(m => m.label),
+      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+      axisLabel: { color: '#94a3b8', fontSize: 10, rotate: 25 },
+      axisTick: { show: false }
+    },
+    yAxis: {
+      type: 'category',
+      data: rows.map(r => r.task),
+      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+      axisLabel: { color: '#94a3b8', fontSize: 10, width: 130, overflow: 'truncate' },
+      axisTick: { show: false }
+    },
+    visualMap: {
+      min: 0,
+      max: 1,
+      dimension: 2,
+      orient: 'horizontal',
+      left: 'center',
+      top: 16,
+      calculable: false,
+      inRange: {
+        color: ['rgba(99,132,255,0.12)', 'rgba(99,132,255,0.95)']
+      },
+      textStyle: { color: '#94a3b8' }
+    },
+    series: [{
+      type: 'heatmap',
+      data: normalizedData,
+      label: {
+        show: true,
+        color: document.body.classList.contains('theme-light') ? '#0f172a' : '#f8fafc',
+        fontSize: 9,
+        formatter: (p) => formatValue(p.data[3], p.data[4])
+      },
+      itemStyle: {
+        borderColor: 'rgba(255,255,255,0.08)',
+        borderWidth: 1,
+        borderRadius: 4
+      },
+      emphasis: {
+        itemStyle: {
+          borderColor: COLORS.cyan,
+          borderWidth: 1.5
+        }
+      }
+    }],
+    animationDuration: 900
+  });
+}
+
+function buildTaskKPIRows() {
   const data = getFilteredRawData();
   const dayKeys = new Set();
   const taskMap = {};
@@ -249,87 +335,66 @@ export function renderTaskTypePie(containerId) {
     { key: 'kpiAfterExclusion', label: 'KPI After Exclusion', kind: 'pct' }
   ];
 
-  const normalizedData = [];
-  metrics.forEach((metric, metricIndex) => {
-    const values = rows.map(r => Number(r[metric.key]) || 0);
-    const min = Math.min(...values, 0);
-    const max = Math.max(...values, 1);
-    const range = max - min || 1;
-    rows.forEach((row, rowIndex) => {
-      const rawValue = Number(row[metric.key]) || 0;
-      const normalized = (rawValue - min) / range;
-      normalizedData.push([metricIndex, rowIndex, normalized, rawValue, metric.kind]);
-    });
-  });
+  return { rows, metrics };
+}
 
-  const formatValue = (rawValue, kind) => {
-    if (kind === 'pct') return `${(rawValue * 100).toFixed(1)}%`;
-    if (kind === 'number' && rawValue >= 1000) return rawValue.toLocaleString('en-US');
-    return Number(rawValue.toFixed(2)).toString();
-  };
+export function renderTaskKPIBars(containerId) {
+  const { chart, titleEl } = getOrCreate(containerId) || {};
+  if (!chart) return;
+  setTitle(titleEl, 'Task KPI Comparison (Alternative View)', 'cyan');
+
+  const { rows, metrics } = buildTaskKPIRows();
+  const percentMetrics = metrics.filter(m => m.kind === 'pct');
 
   chart.setOption({
     tooltip: {
-      position: 'top',
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
       backgroundColor: 'rgba(17,24,39,0.95)',
       borderColor: 'rgba(255,255,255,0.08)',
       textStyle: { color: '#f1f5f9', fontSize: 12 },
-      formatter: (p) => {
-        const row = rows[p.data[1]];
-        const metric = metrics[p.data[0]];
-        return `${row.task}<br/>${metric.label}: ${formatValue(p.data[3], p.data[4])}`;
+      formatter: (params) => {
+        if (!params?.length) return '';
+        const metricLabel = params[0].axisValue;
+        const lines = params
+          .filter(p => p.value > 0)
+          .map(p => `${p.marker} ${p.seriesName}: ${Number(p.value).toFixed(1)}%`);
+        return `${metricLabel}<br/>${lines.join('<br/>')}`;
       }
     },
-    grid: { left:100,right: 20, top: 50, bottom: 58 },
+    legend: {
+      type: 'scroll',
+      top: 0,
+      textStyle: { color: '#94a3b8', fontSize: 10 },
+      pageTextStyle: { color: '#94a3b8' }
+    },
+    grid: { left: 60, right: 20, top: 44, bottom: 52 },
     xAxis: {
       type: 'category',
-      data: metrics.map(m => m.label),
+      data: percentMetrics.map(m => m.label),
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 10, rotate: 25 },
+      axisLabel: { color: '#94a3b8', fontSize: 10, rotate: 18 },
       axisTick: { show: false }
     },
     yAxis: {
-      type: 'category',
-      data: rows.map(r => r.task),
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 10, width: 130, overflow: 'truncate' },
-      axisTick: { show: false }
-    },
-    visualMap: {
+      type: 'value',
       min: 0,
       max: 1,
-      dimension: 2,
-      orient: 'horizontal',
-      left: 'center',
-      top: 16,
-      calculable: false,
-      inRange: {
-        color: ['rgba(99,132,255,0.12)', 'rgba(99,132,255,0.95)']
-      },
-      textStyle: { color: '#94a3b8' }
+      splitNumber: 5,
+      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
+      axisLabel: { color: '#64748b', formatter: (v) => `${Math.round(v * 100)}%` }
     },
-    series: [{
-      type: 'heatmap',
-      data: normalizedData,
-      label: {
-        show: true,
-        color: '#f8fafc',
-        fontSize: 9,
-        formatter: (p) => formatValue(p.data[3], p.data[4])
-      },
-      itemStyle: {
-        borderColor: 'rgba(255,255,255,0.08)',
-        borderWidth: 1,
-        borderRadius: 4
-      },
+    color: PALETTE,
+    series: rows.map((row) => ({
+      name: row.task,
+      type: 'bar',
+      barMaxWidth: 20,
+      data: percentMetrics.map(m => row[m.key] || 0),
       emphasis: {
-        itemStyle: {
-          borderColor: COLORS.cyan,
-          borderWidth: 1.5
-        }
+        focus: 'series'
       }
-    }],
-    animationDuration: 900
+    })),
+    animationDuration: 1000
   });
 }
 

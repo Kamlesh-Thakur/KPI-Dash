@@ -136,7 +136,8 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 20px 24px;
+  height: var(--header-height);
+  padding: 0 14px 0 16px;
   border-bottom: 1px solid var(--border-primary);
 }
 
@@ -162,6 +163,27 @@ body {
   white-space: nowrap;
   flex: 1;
   min-width: 0;
+}
+
+.sidebar-collapse-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--bg-glass);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.sidebar-collapse-toggle:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .sidebar-close {
@@ -282,6 +304,53 @@ body {
   overflow-y: auto;
   overflow-x: hidden;
   transition: margin-left var(--transition-slow);
+}
+
+body.sidebar-collapsed .sidebar {
+  width: var(--sidebar-collapsed);
+}
+
+body.sidebar-collapsed .main-content {
+  margin-left: var(--sidebar-collapsed);
+}
+
+body.sidebar-collapsed .sidebar-brand {
+  justify-content: center;
+  padding: 0;
+  gap: 0;
+}
+
+body.sidebar-collapsed .brand-text,
+body.sidebar-collapsed .sidebar-footer,
+body.sidebar-collapsed .sidebar-collapse-toggle svg {
+  display: none;
+}
+
+body.sidebar-collapsed .sidebar-collapse-toggle {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+}
+
+body.sidebar-collapsed .sidebar-collapse-toggle::before {
+  content: '>';
+  font-size: 13px;
+  font-weight: 700;
+}
+
+body.sidebar-collapsed .sidebar-nav {
+  padding: 12px 8px;
+}
+
+body.sidebar-collapsed .nav-item {
+  justify-content: center;
+  padding: 12px 10px;
+}
+
+body.sidebar-collapsed .nav-item span {
+  display: none;
 }
 
 /* === Header === */
@@ -818,6 +887,9 @@ body.theme-light .ag-theme-custom {
   }
   .sidebar-brand {
     padding-right: 12px;
+  }
+  .sidebar-collapse-toggle {
+    display: none;
   }
   .sidebar-close {
     display: flex;
