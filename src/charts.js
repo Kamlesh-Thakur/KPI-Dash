@@ -398,6 +398,149 @@ export function renderTaskKPIBars(containerId) {
   });
 }
 
+export function renderTaskTypeResolutionTargets(containerId) {
+  const { chart, titleEl } = getOrCreate(containerId) || {};
+  if (!chart) return;
+  setTitle(titleEl, 'Task Type Resolution Performance (incl. Incident)', 'green');
+
+  const stats = getTaskTypeResolutionStats();
+  const labels = stats.map(s => s.name);
+
+  chart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      backgroundColor: 'rgba(17,24,39,0.95)',
+      borderColor: 'rgba(255,255,255,0.08)',
+      textStyle: { color: '#f1f5f9', fontSize: 12 }
+    },
+    legend: {
+      data: ['Total', 'Resolved <= 4h', 'Resolved <= 24h', 'Same Day Closed', 'Target Attainment %'],
+      textStyle: { color: '#94a3b8', fontSize: 11 },
+      top: 0
+    },
+    grid: { left: 60, right: 50, top: 36, bottom: 50 },
+    xAxis: {
+      type: 'category',
+      data: labels,
+      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+      axisLabel: { color: '#94a3b8', fontSize: 10, rotate: 30 },
+      axisTick: { show: false }
+    },
+    yAxis: [
+      {
+        type: 'value',
+        name: 'Count',
+        nameTextStyle: { color: '#64748b', fontSize: 10 },
+        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
+        axisLabel: { color: '#64748b', fontSize: 10 }
+      },
+      {
+        type: 'value',
+        name: 'Target %',
+        min: 0,
+        max: 100,
+        splitLine: { show: false },
+        axisLabel: { color: '#64748b', fontSize: 10, formatter: '{value}%' }
+      }
+    ],
+    series: [
+      {
+        name: 'Total',
+        type: 'bar',
+        barMaxWidth: 18,
+        data: stats.map(s => s.total),
+        itemStyle: { color: COLORS.blue, borderRadius: [4, 4, 0, 0] }
+      },
+      {
+        name: 'Resolved <= 4h',
+        type: 'bar',
+        barMaxWidth: 18,
+        data: stats.map(s => s.within4h),
+        itemStyle: { color: COLORS.amber, borderRadius: [4, 4, 0, 0] }
+      },
+      {
+        name: 'Resolved <= 24h',
+        type: 'bar',
+        barMaxWidth: 18,
+        data: stats.map(s => s.within24h),
+        itemStyle: { color: COLORS.cyan, borderRadius: [4, 4, 0, 0] }
+      },
+      {
+        name: 'Same Day Closed',
+        type: 'bar',
+        barMaxWidth: 18,
+        data: stats.map(s => s.sameDay),
+        itemStyle: { color: COLORS.purple, borderRadius: [4, 4, 0, 0] }
+      },
+      {
+        name: 'Target Attainment %',
+        type: 'line',
+        yAxisIndex: 1,
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 6,
+        data: stats.map(s => s.targetAttainmentPct),
+        lineStyle: { color: COLORS.green, width: 2 },
+        itemStyle: { color: COLORS.green }
+      }
+    ],
+    animationDuration: 1100
+  });
+}
+
+function getTaskTypeResolutionStats() {
+  const tasks = getFilteredRawData();
+  const incidents = getFilteredIncidentData();
+  const byType = {};
+
+  const getOrInit = (name) => {
+    if (!byType[name]) {
+      byType[name] = { name, total: 0, within4h: 0, within24h: 0, sameDay: 0, targetAttainmentPct: 0 };
+    }
+    return byType[name];
+  };
+
+  tasks.forEach((r) => {
+    const name = r['Task Type'] || 'Unknown';
+    const rec = getOrInit(name);
+    rec.total += 1;
+    const duration = parseFloat(r['Duration']);
+    if (!Number.isNaN(duration)) {
+      const hours = duration * 24;
+      if (hours <= 4) rec.within4h += 1;
+      if (hours <= 24) rec.within24h += 1;
+    }
+    if (r['Same day Closure'] === true) rec.sameDay += 1;
+  });
+
+  incidents.forEach((r) => {
+    const rec = getOrInit('Incident');
+    rec.total += 1;
+    const duration = parseFloat(r['Duration']);
+    if (!Number.isNaN(duration)) {
+      const hours = duration * 24;
+      if (hours <= 4) rec.within4h += 1;
+      if (hours <= 24) rec.within24h += 1;
+    }
+    if (r['Same day Closure'] === true) rec.sameDay += 1;
+  });
+
+  const stats = Object.values(byType)
+    .map((s) => {
+      const total = s.total || 1;
+      const use4hTarget = s.name.toLowerCase().includes('fiber support') || s.name.toLowerCase() === 'incident';
+      const targetCount = use4hTarget ? s.within4h : s.within24h;
+      return {
+        ...s,
+        targetAttainmentPct: Math.round((targetCount / total) * 100)
+      };
+    })
+    .sort((a, b) => b.total - a.total);
+
+  return stats;
+}
+
 export function renderRegionBar(containerId) {
   const { chart, titleEl } = getOrCreate(containerId) || {};
   if (!chart) return;

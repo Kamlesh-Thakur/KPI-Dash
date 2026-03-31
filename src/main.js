@@ -13,7 +13,7 @@ import {
 } from './dataStore.js';
 import {
   renderTasksTrend, renderTaskTypePie, renderRegionBar,
-  renderPriorityDist, renderSLAGauge, renderBranchHeatmap,
+  renderPriorityDist, renderSLAGauge, renderBranchHeatmap, renderTaskTypeResolutionTargets,
   renderTaskKPIBars,
   renderIncidentTrend, renderIncidentCategory,
   renderIncidentComplexity, renderIncidentClosure,
@@ -504,6 +504,7 @@ function renderTabContent(tab) {
       renderSLAGauge('chart-sla-gauge');
       renderBranchHeatmap('chart-branch-heatmap');
       renderTaskKPIBars('chart-task-kpi-bars');
+      renderTaskTypeResolutionTargets('chart-type-resolution-targets');
       break;
     case 'tasks':
       renderTasksGrid();
