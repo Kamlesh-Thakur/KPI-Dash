@@ -69,22 +69,37 @@ export function resizeCharts() {
 export function renderTasksTrend(containerId) {
   const { chart, titleEl } = getOrCreate(containerId) || {};
   if (!chart) return;
-  setTitle(titleEl, 'Tasks Over Time', 'blue');
+  setTitle(titleEl, 'Tasks & Incidents Over Time', 'blue');
 
-  const data = getFilteredRawData();
+  const taskData = getFilteredRawData();
+  const incidentData = getFilteredIncidentData();
 
-  // Group by completed date
-  const dateMap = {};
-  data.forEach(row => {
+  // Group tasks by completed date
+  const taskDateMap = {};
+  taskData.forEach(row => {
     const d = excelDateToJS(row['Completed date']);
     if (!d) return;
     const key = d.toISOString().slice(0, 10);
-    dateMap[key] = (dateMap[key] || 0) + 1;
+    taskDateMap[key] = (taskDateMap[key] || 0) + 1;
   });
 
-  const sorted = Object.entries(dateMap).sort((a, b) => a[0].localeCompare(b[0]));
-  const dates = sorted.map(s => s[0]);
-  const counts = sorted.map(s => s[1]);
+  // Group incidents by completed date
+  const incidentDateMap = {};
+  incidentData.forEach(row => {
+    const d = excelDateToJS(row['Completed date']);
+    if (!d) return;
+    const key = d.toISOString().slice(0, 10);
+    incidentDateMap[key] = (incidentDateMap[key] || 0) + 1;
+  });
+
+  // Build a shared timeline across tasks and incidents
+  const allDates = [...new Set([
+    ...Object.keys(taskDateMap),
+    ...Object.keys(incidentDateMap)
+  ])].sort((a, b) => a.localeCompare(b));
+
+  const taskCounts = allDates.map(date => taskDateMap[date] || 0);
+  const incidentCounts = allDates.map(date => incidentDateMap[date] || 0);
 
   chart.setOption({
     tooltip: {
@@ -93,10 +108,15 @@ export function renderTasksTrend(containerId) {
       borderColor: 'rgba(255,255,255,0.08)',
       textStyle: { color: '#f1f5f9', fontSize: 12 }
     },
+    legend: {
+      data: ['Tasks', 'Incidents'],
+      textStyle: { color: '#94a3b8', fontSize: 11 },
+      top: 0
+    },
     grid: { left: 50, right: 20, top: 20, bottom: 40 },
     xAxis: {
       type: 'category',
-      data: dates,
+      data: allDates,
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
       axisLabel: { color: '#64748b', fontSize: 10, rotate: 30,
         formatter: v => { const d = new Date(v); return formatDateShort(d); }
@@ -109,8 +129,9 @@ export function renderTasksTrend(containerId) {
       axisLabel: { color: '#64748b', fontSize: 10 }
     },
     series: [{
+      name: 'Tasks',
       type: 'line',
-      data: counts,
+      data: taskCounts,
       smooth: true,
       symbol: 'none',
       lineStyle: { width: 2.5, color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
@@ -121,6 +142,22 @@ export function renderTasksTrend(containerId) {
         color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
           { offset: 0, color: 'rgba(99,132,255,0.3)' },
           { offset: 1, color: 'rgba(99,132,255,0)' }
+        ])
+      }
+    }, {
+      name: 'Incidents',
+      type: 'line',
+      data: incidentCounts,
+      smooth: true,
+      symbol: 'none',
+      lineStyle: { width: 2.5, color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+        { offset: 0, color: COLORS.red },
+        { offset: 1, color: COLORS.pink }
+      ]) },
+      areaStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: 'rgba(248,113,113,0.2)' },
+          { offset: 1, color: 'rgba(248,113,113,0)' }
         ])
       }
     }],
