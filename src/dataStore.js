@@ -12,7 +12,7 @@ const STATE = {
     region: '',
     branch: '',
     taskType: '',
-    dateMode: 'overall',
+    dateMode: 'monthly',
     dateAnchor: '',
     dateFrom: '',
     dateTo: ''

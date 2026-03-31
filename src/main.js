@@ -159,12 +159,14 @@ function initDateFilters() {
     String(today.getMonth() + 1).padStart(2, '0'),
     String(today.getDate()).padStart(2, '0')
   ].join('-');
+  const monthStartText = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
 
+  modeEl.value = 'monthly';
   anchorEl.value = todayText;
   weekEl.value = toISOWeek(today);
   monthEl.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
   setFilter('dateMode', modeEl.value);
-  setFilter('dateAnchor', anchorEl.value);
+  setFilter('dateAnchor', monthStartText);
 
   const syncDateInputs = () => {
     const mode = modeEl.value;
