@@ -501,6 +501,11 @@ function renderKPICards() {
       <div class="kpi-value">${formatDuration(avgDuration)}</div>
       <div class="kpi-change">per task</div>
     </div>
+    <div class="kpi-card purple">
+      <div class="kpi-label">Incidents</div>
+      <div class="kpi-value">${formatNumber(getFilteredIncidentData().length)}</div>
+      <div class="kpi-change">fiber network</div>
+    </div>
   `;
 }
 
