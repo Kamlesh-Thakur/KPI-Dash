@@ -14,6 +14,7 @@ import {
 import {
   renderTasksTrend, renderTaskTypePie, renderRegionBar,
   renderPriorityDist, renderSLAGauge, renderBranchHeatmap, renderTaskTypeResolutionTargets,
+  renderRepeatedSupportWindow, renderImmediateSupportWindow,
   renderTaskKPIBars,
   renderIncidentTrend, renderIncidentCategory,
   renderIncidentComplexity, renderIncidentClosure,
@@ -505,6 +506,8 @@ function renderTabContent(tab) {
       renderBranchHeatmap('chart-branch-heatmap');
       renderTaskKPIBars('chart-task-kpi-bars');
       renderTaskTypeResolutionTargets('chart-type-resolution-targets');
+      renderRepeatedSupportWindow('chart-repeated-support-window');
+      renderImmediateSupportWindow('chart-immediate-support-window');
       break;
     case 'tasks':
       renderTasksGrid();

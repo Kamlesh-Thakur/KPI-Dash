@@ -541,6 +541,128 @@ function getTaskTypeResolutionStats() {
   return stats;
 }
 
+export function renderRepeatedSupportWindow(containerId) {
+  const { chart, titleEl } = getOrCreate(containerId) || {};
+  if (!chart) return;
+  setTitle(titleEl, 'Repeated Support Volume by Time Window', 'amber');
+
+  const data = getFilteredRawData();
+  const buckets = [
+    { label: 'Within 1 day', key: 'Repeated Fiber Support (yes/No), within 1 days' },
+    { label: 'Within 3 days', key: 'Repeated Fiber Support (yes/No), within 3 days' },
+    { label: 'Within 7 days', key: 'Repeated Fiber Support (yes/No), within 7 days' },
+    { label: 'Within 30 days', key: 'Repeated Fiber Support (yes/No), within 30 days' }
+  ];
+  const counts = buckets.map((b) => data.reduce((sum, row) => sum + (isPositiveFlag(row[b.key]) ? 1 : 0), 0));
+
+  chart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      backgroundColor: 'rgba(17,24,39,0.95)',
+      borderColor: 'rgba(255,255,255,0.08)',
+      textStyle: { color: '#f1f5f9', fontSize: 12 }
+    },
+    grid: { left: 60, right: 20, top: 18, bottom: 40 },
+    xAxis: {
+      type: 'category',
+      data: buckets.map(b => b.label),
+      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+      axisLabel: { color: '#94a3b8', fontSize: 11 },
+      axisTick: { show: false }
+    },
+    yAxis: {
+      type: 'value',
+      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
+      axisLabel: { color: '#64748b', fontSize: 10 }
+    },
+    series: [{
+      name: 'Repeated Support Count',
+      type: 'bar',
+      data: counts,
+      barMaxWidth: 48,
+      itemStyle: {
+        borderRadius: [6, 6, 0, 0],
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: COLORS.amber },
+          { offset: 1, color: COLORS.orange }
+        ])
+      },
+      label: {
+        show: true,
+        position: 'top',
+        color: '#94a3b8',
+        fontSize: 10
+      }
+    }],
+    animationDuration: 900
+  });
+}
+
+export function renderImmediateSupportWindow(containerId) {
+  const { chart, titleEl } = getOrCreate(containerId) || {};
+  if (!chart) return;
+  setTitle(titleEl, 'Immediate Support Volume by Time Window', 'cyan');
+
+  const data = getFilteredRawData();
+  const buckets = [
+    { label: 'Within 1 day', key: 'Immediate Fiber support (yes/No), within 1 days' },
+    { label: 'Within 3 days', key: 'Immediate Fiber support (yes/No), within 3 days' },
+    { label: 'Within 7 days', key: 'Immediate fiber support (yes/No), within 7 days' },
+    { label: 'Within 30 days', key: 'Immediate fiber support (yes/No), within 30 days' }
+  ];
+  const counts = buckets.map((b) => data.reduce((sum, row) => sum + (isPositiveFlag(row[b.key]) ? 1 : 0), 0));
+
+  chart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      backgroundColor: 'rgba(17,24,39,0.95)',
+      borderColor: 'rgba(255,255,255,0.08)',
+      textStyle: { color: '#f1f5f9', fontSize: 12 }
+    },
+    grid: { left: 60, right: 20, top: 18, bottom: 40 },
+    xAxis: {
+      type: 'category',
+      data: buckets.map(b => b.label),
+      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+      axisLabel: { color: '#94a3b8', fontSize: 11 },
+      axisTick: { show: false }
+    },
+    yAxis: {
+      type: 'value',
+      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
+      axisLabel: { color: '#64748b', fontSize: 10 }
+    },
+    series: [{
+      name: 'Immediate Support Count',
+      type: 'bar',
+      data: counts,
+      barMaxWidth: 48,
+      itemStyle: {
+        borderRadius: [6, 6, 0, 0],
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: COLORS.cyan },
+          { offset: 1, color: COLORS.blue }
+        ])
+      },
+      label: {
+        show: true,
+        position: 'top',
+        color: '#94a3b8',
+        fontSize: 10
+      }
+    }],
+    animationDuration: 900
+  });
+}
+
+function isPositiveFlag(value) {
+  if (value === true || value === 1) return true;
+  const text = (value ?? '').toString().trim().toLowerCase();
+  return text === 'yes' || text === 'y' || text === 'true' || text === '1';
+}
+
 export function renderRegionBar(containerId) {
   const { chart, titleEl } = getOrCreate(containerId) || {};
   if (!chart) return;
