@@ -28,11 +28,13 @@ let tasksGridApi = null;
 let incidentsGridApi = null;
 let currentTab = 'dashboard';
 let dataLoaded = false;
+let currentTheme = localStorage.getItem('kpi-theme') || 'dark';
 
 // ==========================================
 // INIT
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
+  initTheme();
   initNavigation();
   initFilters();
   initUpload();
@@ -274,6 +276,53 @@ function initMenuToggle() {
 }
 
 // ==========================================
+// THEME
+// ==========================================
+function initTheme() {
+  applyTheme(currentTheme);
+
+  const themeToggle = document.getElementById('theme-toggle');
+  if (!themeToggle) return;
+
+  themeToggle.addEventListener('click', () => {
+    const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    applyTheme(nextTheme);
+  });
+}
+
+function applyTheme(theme) {
+  currentTheme = theme === 'light' ? 'light' : 'dark';
+  document.body.classList.toggle('theme-light', currentTheme === 'light');
+  localStorage.setItem('kpi-theme', currentTheme);
+  updateThemeToggleUI();
+  updateGridThemes();
+  resizeCharts();
+}
+
+function updateThemeToggleUI() {
+  const themeToggle = document.getElementById('theme-toggle');
+  const themeIcon = document.getElementById('theme-toggle-icon');
+  const themeLabel = document.getElementById('theme-toggle-label');
+  if (!themeToggle || !themeIcon || !themeLabel) return;
+
+  const isLight = currentTheme === 'light';
+  themeIcon.textContent = isLight ? '☀️' : '🌙';
+  themeLabel.textContent = isLight ? 'Light' : 'Dark';
+  const target = isLight ? 'dark' : 'light';
+  themeToggle.setAttribute('aria-label', `Switch to ${target} mode`);
+  themeToggle.setAttribute('title', `Switch to ${target} mode`);
+}
+
+function updateGridThemes() {
+  const nextGridTheme = currentTheme === 'light' ? 'ag-theme-quartz' : 'ag-theme-quartz-dark';
+  const altGridTheme = currentTheme === 'light' ? 'ag-theme-quartz-dark' : 'ag-theme-quartz';
+  document.querySelectorAll('.ag-theme-custom').forEach((gridEl) => {
+    gridEl.classList.remove(altGridTheme);
+    gridEl.classList.add(nextGridTheme);
+  });
+}
+
+// ==========================================
 // RENDER ALL
 // ==========================================
 function renderAll() {
@@ -410,7 +459,7 @@ function renderTasksGrid() {
   // Clear container
   container.innerHTML = '';
   const gridDiv = document.createElement('div');
-  gridDiv.className = 'ag-theme-quartz-dark ag-theme-custom';
+  gridDiv.className = `ag-theme-custom ${currentTheme === 'light' ? 'ag-theme-quartz' : 'ag-theme-quartz-dark'}`;
   gridDiv.style.height = '600px';
   gridDiv.style.width = '100%';
   container.appendChild(gridDiv);
@@ -529,7 +578,7 @@ function renderIncidentsGrid() {
 
   container.innerHTML = '';
   const gridDiv = document.createElement('div');
-  gridDiv.className = 'ag-theme-quartz-dark ag-theme-custom';
+  gridDiv.className = `ag-theme-custom ${currentTheme === 'light' ? 'ag-theme-quartz' : 'ag-theme-quartz-dark'}`;
   gridDiv.style.height = '500px';
   gridDiv.style.width = '100%';
   container.appendChild(gridDiv);

@@ -18,6 +18,7 @@
   --text-primary: #f1f5f9;
   --text-secondary: #94a3b8;
   --text-muted: #64748b;
+  --header-bg: rgba(10, 14, 26, 0.85);
 
   --accent-blue: #6384ff;
   --accent-blue-glow: rgba(99, 132, 255, 0.25);
@@ -50,6 +51,27 @@
   --transition-fast: 0.15s ease;
   --transition-normal: 0.25s ease;
   --transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body.theme-light {
+  --bg-primary: #f3f6fb;
+  --bg-secondary: #ffffff;
+  --bg-card: rgba(255, 255, 255, 0.9);
+  --bg-card-hover: rgba(255, 255, 255, 0.98);
+  --bg-glass: rgba(15, 23, 42, 0.06);
+  --bg-input: rgba(241, 245, 249, 0.9);
+
+  --border-primary: rgba(15, 23, 42, 0.15);
+  --border-active: rgba(79, 70, 229, 0.45);
+
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --header-bg: rgba(255, 255, 255, 0.9);
+
+  --accent-blue-glow: rgba(99, 132, 255, 0.18);
+  --shadow-card: 0 4px 24px rgba(15, 23, 42, 0.08);
+  --shadow-glow: 0 0 30px rgba(99, 132, 255, 0.1);
 }
 
 /* === Reset & Base === */
@@ -272,7 +294,7 @@ body {
   justify-content: space-between;
   padding: 0 28px;
   height: var(--header-height);
-  background: rgba(10, 14, 26, 0.85);
+  background: var(--header-bg);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-primary);
 }
@@ -306,6 +328,32 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-primary);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+}
+
+.theme-toggle:hover {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px var(--accent-blue-glow);
+}
+
+.theme-toggle-icon {
+  font-size: 0.95rem;
+  line-height: 1;
 }
 
 .filter-group {
@@ -616,6 +664,12 @@ body {
   --ag-row-height: 40px;
   --ag-grid-size: 6px;
   --ag-cell-horizontal-padding: 12px;
+}
+
+body.theme-light .ag-theme-custom {
+  --ag-header-background-color: rgba(15, 23, 42, 0.04);
+  --ag-odd-row-background-color: rgba(15, 23, 42, 0.02);
+  --ag-row-hover-color: rgba(99, 132, 255, 0.1);
 }
 
 .ag-theme-custom .ag-header-cell-label {
