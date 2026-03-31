@@ -169,51 +169,167 @@ export function renderTasksTrend(containerId) {
 export function renderTaskTypePie(containerId) {
   const { chart, titleEl } = getOrCreate(containerId) || {};
   if (!chart) return;
-  setTitle(titleEl, 'Tasks by Type', 'purple');
+  setTitle(titleEl, 'Task KPI Matrix', 'purple');
 
   const data = getFilteredRawData();
-  const typeMap = {};
-  data.forEach(r => {
-    const t = r['Task Type'] || 'Unknown';
-    typeMap[t] = (typeMap[t] || 0) + 1;
+  const dayKeys = new Set();
+  const taskMap = {};
+
+  data.forEach((r) => {
+    const task = r['Task Type'] || 'Unknown';
+    if (!taskMap[task]) {
+      taskMap[task] = {
+        total: 0,
+        after5: 0,
+        delayedBefore5: 0,
+        after7: 0,
+        delayedBefore7: 0,
+        closedWithinSla: 0,
+        closedSameDay: 0,
+        closedWithin24h: 0,
+        considered: 0
+      };
+    }
+
+    const m = taskMap[task];
+    m.total += 1;
+
+    const completed = excelDateToJS(r['Completed date'] ?? r['Task Completed']);
+    if (completed instanceof Date && !Number.isNaN(completed.getTime())) {
+      dayKeys.add(completed.toISOString().slice(0, 10));
+    }
+
+    const assignedHour = Number(r['Task Assigned hour']);
+    if (!Number.isNaN(assignedHour) && assignedHour >= 17) m.after5 += 1;
+    if (!Number.isNaN(assignedHour) && assignedHour >= 19) m.after7 += 1;
+
+    const exceptions = (r['Exceptions'] || '').toString().toLowerCase();
+    const isDelayed = exceptions.includes('delay');
+    const isConsidered = exceptions.includes('consider');
+    if (isDelayed && !Number.isNaN(assignedHour) && assignedHour < 17) m.delayedBefore5 += 1;
+    if (isDelayed && !Number.isNaN(assignedHour) && assignedHour < 19) m.delayedBefore7 += 1;
+    if (isConsidered) m.considered += 1;
+
+    const durationDays = Number(r['Duration']);
+    const durationHours = Number.isNaN(durationDays) ? null : durationDays * 24;
+    const slaHours = task.toLowerCase().includes('incident') ? 4 : 8;
+    if (durationHours != null && durationHours <= slaHours) m.closedWithinSla += 1;
+    if (r['Same day Closure'] === true) m.closedSameDay += 1;
+    if (durationHours != null && durationHours <= 24) m.closedWithin24h += 1;
   });
 
-  const pieData = Object.entries(typeMap)
-    .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => b.value - a.value);
+  const totalDays = Math.max(dayKeys.size, 1);
+  const rows = Object.entries(taskMap)
+    .map(([task, m]) => {
+      const total = m.total || 1;
+      return {
+        task,
+        totalTickets: m.total,
+        assignedAfter5: m.after5 / total,
+        delayedBefore5: m.delayedBefore5 / total,
+        assignedAfter7: m.after7 / total,
+        delayedBefore7: m.delayedBefore7 / total,
+        closedWithinSla: m.closedWithinSla / total,
+        closedSameDay: m.closedSameDay / total,
+        closedWithin24h: m.closedWithin24h / total,
+        kpiAfterExclusion: m.considered / total
+      };
+    })
+    .sort((a, b) => b.totalTickets - a.totalTickets);
+
+  const metrics = [
+    { key: 'totalTickets', label: 'Total Tickets', kind: 'number' },
+    { key: 'assignedAfter5', label: 'Assigned > 5 PM', kind: 'pct' },
+    { key: 'delayedBefore5', label: 'Delayed (< 5 PM)', kind: 'pct' },
+    { key: 'assignedAfter7', label: 'Assigned > 7 PM', kind: 'pct' },
+    { key: 'delayedBefore7', label: 'Delayed (< 7 PM)', kind: 'pct' },
+    { key: 'closedWithinSla', label: 'Closed in 4/8h', kind: 'pct' },
+    { key: 'closedSameDay', label: 'Same Day', kind: 'pct' },
+    { key: 'closedWithin24h', label: 'Within 24h', kind: 'pct' },
+    { key: 'kpiAfterExclusion', label: 'KPI After Exclusion', kind: 'pct' }
+  ];
+
+  const normalizedData = [];
+  metrics.forEach((metric, metricIndex) => {
+    const values = rows.map(r => Number(r[metric.key]) || 0);
+    const min = Math.min(...values, 0);
+    const max = Math.max(...values, 1);
+    const range = max - min || 1;
+    rows.forEach((row, rowIndex) => {
+      const rawValue = Number(row[metric.key]) || 0;
+      const normalized = (rawValue - min) / range;
+      normalizedData.push([metricIndex, rowIndex, normalized, rawValue, metric.kind]);
+    });
+  });
+
+  const formatValue = (rawValue, kind) => {
+    if (kind === 'pct') return `${(rawValue * 100).toFixed(1)}%`;
+    if (kind === 'number' && rawValue >= 1000) return rawValue.toLocaleString('en-US');
+    return Number(rawValue.toFixed(2)).toString();
+  };
 
   chart.setOption({
     tooltip: {
-      trigger: 'item',
+      position: 'top',
       backgroundColor: 'rgba(17,24,39,0.95)',
       borderColor: 'rgba(255,255,255,0.08)',
       textStyle: { color: '#f1f5f9', fontSize: 12 },
-      formatter: '{b}: {c} ({d}%)'
+      formatter: (p) => {
+        const row = rows[p.data[1]];
+        const metric = metrics[p.data[0]];
+        return `${row.task}<br/>${metric.label}: ${formatValue(p.data[3], p.data[4])}`;
+      }
     },
-    legend: {
-      type: 'scroll',
-      orient: 'vertical',
-      right: 10,
-      top: 'middle',
-      textStyle: { color: '#94a3b8', fontSize: 11 },
-      pageTextStyle: { color: '#94a3b8' }
+    grid: { left:100,right: 20, top: 50, bottom: 58 },
+    xAxis: {
+      type: 'category',
+      data: metrics.map(m => m.label),
+      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+      axisLabel: { color: '#94a3b8', fontSize: 10, rotate: 25 },
+      axisTick: { show: false }
     },
-    color: PALETTE,
-    series: [{
-      type: 'pie',
-      radius: ['45%', '72%'],
-      center: ['35%', '50%'],
-      avoidLabelOverlap: true,
-      itemStyle: { borderRadius: 6, borderColor: 'rgba(10,14,26,0.8)', borderWidth: 2 },
-      label: { show: false },
-      emphasis: {
-        label: { show: true, fontSize: 13, fontWeight: 600, color: '#f1f5f9' },
-        itemStyle: { shadowBlur: 20, shadowColor: 'rgba(0,0,0,0.3)' }
+    yAxis: {
+      type: 'category',
+      data: rows.map(r => r.task),
+      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+      axisLabel: { color: '#94a3b8', fontSize: 10, width: 130, overflow: 'truncate' },
+      axisTick: { show: false }
+    },
+    visualMap: {
+      min: 0,
+      max: 1,
+      dimension: 2,
+      orient: 'horizontal',
+      left: 'center',
+      top: 16,
+      calculable: false,
+      inRange: {
+        color: ['rgba(99,132,255,0.12)', 'rgba(99,132,255,0.95)']
       },
-      data: pieData
+      textStyle: { color: '#94a3b8' }
+    },
+    series: [{
+      type: 'heatmap',
+      data: normalizedData,
+      label: {
+        show: true,
+        color: '#f8fafc',
+        fontSize: 9,
+        formatter: (p) => formatValue(p.data[3], p.data[4])
+      },
+      itemStyle: {
+        borderColor: 'rgba(255,255,255,0.08)',
+        borderWidth: 1,
+        borderRadius: 4
+      },
+      emphasis: {
+        itemStyle: {
+          borderColor: COLORS.cyan,
+          borderWidth: 1.5
+        }
+      }
     }],
-    animationDuration: 1000,
-    animationEasing: 'cubicOut'
+    animationDuration: 900
   });
 }
 
