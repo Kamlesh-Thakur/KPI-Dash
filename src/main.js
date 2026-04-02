@@ -12,8 +12,8 @@ import {
   excelDateToJS, formatDate, formatDuration, getState
 } from './dataStore.js';
 import {
-  renderTasksTrend, renderTaskTypePie, renderRegionBar,
-  renderPriorityDist, renderSLAGauge, renderBranchHeatmap, renderTaskTypeResolutionTargets,
+  renderTasksTrend, renderTaskTypePie,
+  renderPriorityDist, renderBranchHeatmap, renderTaskTypeResolutionTargets,
   renderRepeatedSupportWindow, renderImmediateSupportWindow, renderRepeatedSupportByBranch, renderImmediateSupportByBranch,
   renderTaskKPIBars,
   renderIncidentTrend, renderIncidentCategory,
@@ -501,9 +501,9 @@ function renderTabContent(tab) {
     case 'dashboard':
       renderTasksTrend('chart-tasks-trend');
       renderTaskTypePie('chart-task-type-pie');
-      renderRegionBar('chart-region-bar');
+      renderIncidentCategory('chart-incident-category-dashboard');
+      renderIncidentComplexity('chart-incident-complexity-dashboard');
       renderPriorityDist('chart-priority-dist');
-      renderSLAGauge('chart-sla-gauge');
       renderBranchHeatmap('chart-branch-heatmap');
       renderTaskKPIBars('chart-task-kpi-bars');
       renderTaskTypeResolutionTargets('chart-type-resolution-targets');
