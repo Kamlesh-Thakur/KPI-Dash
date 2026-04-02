@@ -8,6 +8,7 @@ import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-quartz.css';
 import {
   loadData, loadTeamPerformanceData, getFilteredRawData, getFilteredIncidentData,
+  getFilteredRawDataForRange, getFilteredIncidentDataForRange, getDateFilterRange,
   setFilter, getUniqueValues, formatNumber,
   excelDateToJS, formatDate, formatDuration, getState
 } from './dataStore.js';
@@ -32,12 +33,14 @@ let incidentsGridApi = null;
 let currentTab = 'dashboard';
 let dataLoaded = false;
 let currentTheme = 'dark';
+let showComparisons = false;
 
 // ==========================================
 // INIT
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
+  initCompareToggle();
   initSidebarCollapse();
   initNavigation();
   initFilters();
@@ -367,6 +370,7 @@ function initExport() {
 const MOBILE_NAV_MQ = window.matchMedia('(max-width: 768px)');
 const SIDEBAR_COLLAPSE_KEY = 'kpi-sidebar-collapsed';
 const THEME_COOKIE_KEY = 'kpi-theme';
+const COMPARE_COOKIE_KEY = 'kpi-show-comparisons';
 
 function isMobileNavLayout() {
   return MOBILE_NAV_MQ.matches;
@@ -495,6 +499,27 @@ function updateThemeToggleUI() {
   themeToggle.setAttribute('title', `Switch to ${target} mode`);
 }
 
+function initCompareToggle() {
+  showComparisons = getCookie(COMPARE_COOKIE_KEY) === '1';
+  updateCompareToggleUI();
+  const compareToggle = document.getElementById('compare-toggle');
+  if (!compareToggle) return;
+  compareToggle.addEventListener('click', () => {
+    showComparisons = !showComparisons;
+    setCookie(COMPARE_COOKIE_KEY, showComparisons ? '1' : '0');
+    updateCompareToggleUI();
+    if (dataLoaded) renderKPICards();
+  });
+}
+
+function updateCompareToggleUI() {
+  const compareToggle = document.getElementById('compare-toggle');
+  if (!compareToggle) return;
+  compareToggle.classList.toggle('active', showComparisons);
+  compareToggle.setAttribute('aria-pressed', showComparisons ? 'true' : 'false');
+  compareToggle.setAttribute('title', showComparisons ? 'Hide comparisons' : 'Show comparisons');
+}
+
 function updateGridThemes() {
   const nextGridTheme = currentTheme === 'light' ? 'ag-theme-quartz' : 'ag-theme-quartz-dark';
   const altGridTheme = currentTheme === 'light' ? 'ag-theme-quartz-dark' : 'ag-theme-quartz';
@@ -588,39 +613,163 @@ function renderKPICards() {
   const incidentAvgDuration = incidentTotal > 0
     ? (incidentData.reduce((sum, r) => sum + (parseFloat(r['Duration']) || 0), 0) / incidentTotal)
     : 0;
+  const compare = showComparisons ? buildComparisons() : emptyCompare();
+  const compareContextEl = document.getElementById('compare-context');
+  if (compareContextEl) {
+    compareContextEl.style.display = showComparisons ? 'block' : 'none';
+    compareContextEl.textContent = showComparisons ? buildComparisonContextLabel() : '';
+  }
 
   container.innerHTML = `
     <div class="kpi-card blue">
       <div class="kpi-label">Total Tasks</div>
       <div class="kpi-value">${formatNumber(total)}</div>
       <div class="kpi-change">${taskTypes} task types</div>
+      ${showComparisons ? renderCompareRow(compare.tasks.total, false) : ''}
     </div>
     <div class="kpi-card green">
       <div class="kpi-label">Same-Day Closure</div>
       <div class="kpi-value">${sameDayRate}%</div>
       <div class="kpi-change up">${formatNumber(sameDay)} of ${formatNumber(total)}</div>
+      ${showComparisons ? renderCompareRow(compare.tasks.sameDayRate, true) : ''}
     </div>
     <div class="kpi-card amber">
       <div class="kpi-label">Avg Duration</div>
       <div class="kpi-value">${formatDuration(avgDuration)}</div>
       <div class="kpi-change">per task</div>
+      ${showComparisons ? renderCompareRow(compare.tasks.avgDuration, true) : ''}
     </div>
     <div class="kpi-card purple">
       <div class="kpi-label">Incidents</div>
       <div class="kpi-value">${formatNumber(getFilteredIncidentData().length)}</div>
       <div class="kpi-change">fiber network</div>
+      ${showComparisons ? renderCompareRow(compare.incidents.total, false) : ''}
     </div>
     <div class="kpi-card green">
       <div class="kpi-label">Incident Same-Day Closure</div>
       <div class="kpi-value">${incidentSameDayRate}%</div>
       <div class="kpi-change up">${formatNumber(incidentSameDay)} of ${formatNumber(incidentTotal)}</div>
+      ${showComparisons ? renderCompareRow(compare.incidents.sameDayRate, true) : ''}
     </div>
     <div class="kpi-card amber">
       <div class="kpi-label">Incident Avg Duration</div>
       <div class="kpi-value">${formatDuration(incidentAvgDuration)}</div>
       <div class="kpi-change">per incident</div>
+      ${showComparisons ? renderCompareRow(compare.incidents.avgDuration, true) : ''}
     </div>
   `;
+}
+
+function buildComparisons() {
+  const range = getDateFilterRange();
+  const thisStart = range.start;
+  const thisEnd = range.end;
+  if (!thisStart || !thisEnd) {
+    return emptyCompare();
+  }
+
+  const daySpan = Math.max(1, Math.round((thisEnd - thisStart) / 86400000) + 1);
+  const prevEnd = new Date(thisStart);
+  prevEnd.setDate(prevEnd.getDate() - 1);
+  const prevStart = new Date(prevEnd);
+  prevStart.setDate(prevEnd.getDate() - (daySpan - 1));
+  const yoyStart = new Date(thisStart);
+  yoyStart.setFullYear(yoyStart.getFullYear() - 1);
+  const yoyEnd = new Date(thisEnd);
+  yoyEnd.setFullYear(yoyEnd.getFullYear() - 1);
+
+  const currTasks = getFilteredRawDataForRange(thisStart, thisEnd);
+  const prevTasks = getFilteredRawDataForRange(prevStart, prevEnd);
+  const yoyTasks = getFilteredRawDataForRange(yoyStart, yoyEnd);
+  const currInc = getFilteredIncidentDataForRange(thisStart, thisEnd);
+  const prevInc = getFilteredIncidentDataForRange(prevStart, prevEnd);
+  const yoyInc = getFilteredIncidentDataForRange(yoyStart, yoyEnd);
+
+  const toMetrics = (rows) => {
+    const total = rows.length;
+    const sameDay = rows.filter(r => r['Same day Closure'] === true).length;
+    const sameDayRate = total ? (sameDay / total) * 100 : 0;
+    const avgDuration = total ? rows.reduce((s, r) => s + (parseFloat(r['Duration']) || 0), 0) / total : 0;
+    return { total, sameDayRate, avgDuration };
+  };
+
+  return {
+    tasks: {
+      total: deltaPair(toMetrics(currTasks).total, toMetrics(prevTasks).total, toMetrics(yoyTasks).total),
+      sameDayRate: deltaPair(toMetrics(currTasks).sameDayRate, toMetrics(prevTasks).sameDayRate, toMetrics(yoyTasks).sameDayRate),
+      avgDuration: deltaPair(toMetrics(currTasks).avgDuration, toMetrics(prevTasks).avgDuration, toMetrics(yoyTasks).avgDuration)
+    },
+    incidents: {
+      total: deltaPair(toMetrics(currInc).total, toMetrics(prevInc).total, toMetrics(yoyInc).total),
+      sameDayRate: deltaPair(toMetrics(currInc).sameDayRate, toMetrics(prevInc).sameDayRate, toMetrics(yoyInc).sameDayRate),
+      avgDuration: deltaPair(toMetrics(currInc).avgDuration, toMetrics(prevInc).avgDuration, toMetrics(yoyInc).avgDuration)
+    }
+  };
+}
+
+function deltaPair(current, previous, yoy) {
+  return {
+    mom: calcDelta(current, previous),
+    yoy: calcDelta(current, yoy)
+  };
+}
+
+function calcDelta(current, base) {
+  if (!base) return 0;
+  return ((current - base) / Math.abs(base)) * 100;
+}
+
+function renderCompareRow(pair, isPercent) {
+  return `<div class="kpi-compare">
+    <span class="compare-chip ${pair.mom >= 0 ? 'up' : 'down'}">MoM ${formatDelta(pair.mom, isPercent)}</span>
+    <span class="compare-chip ${pair.yoy >= 0 ? 'up' : 'down'}">YoY ${formatDelta(pair.yoy, isPercent)}</span>
+  </div>`;
+}
+
+function formatDelta(value, _isPercent) {
+  const sign = value >= 0 ? '+' : '';
+  return `${sign}${value.toFixed(1)}%`;
+}
+
+function emptyCompare() {
+  const zero = { mom: 0, yoy: 0 };
+  return {
+    tasks: { total: zero, sameDayRate: zero, avgDuration: zero },
+    incidents: { total: zero, sameDayRate: zero, avgDuration: zero }
+  };
+}
+
+function buildComparisonContextLabel() {
+  const { start, end } = getDateFilterRange();
+  const mode = getState().filters?.dateMode || 'overall';
+  if (!start || !end) return 'Comparison context: current period vs previous period and same period last year.';
+
+  const spanDays = Math.max(1, Math.round((end - start) / 86400000) + 1);
+  const prevEnd = new Date(start);
+  prevEnd.setDate(prevEnd.getDate() - 1);
+  const prevStart = new Date(prevEnd);
+  prevStart.setDate(prevEnd.getDate() - (spanDays - 1));
+  const yoyStart = new Date(start);
+  yoyStart.setFullYear(yoyStart.getFullYear() - 1);
+  const yoyEnd = new Date(end);
+  yoyEnd.setFullYear(yoyEnd.getFullYear() - 1);
+
+  if (mode === 'monthly') {
+    const currentMonth = start.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    const prevMonth = prevStart.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    const yoyMonth = yoyStart.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    return `Current: ${currentMonth} | Last period: ${prevMonth} | Last year: ${yoyMonth}`;
+  }
+
+  return `Current: ${formatRangeShort(start, end)} | Last period: ${formatRangeShort(prevStart, prevEnd)} | Last year: ${formatRangeShort(yoyStart, yoyEnd)}`;
+}
+
+function formatRangeShort(start, end) {
+  const opts = { month: 'short', day: 'numeric', year: 'numeric' };
+  const s = start.toLocaleDateString('en-US', opts);
+  const e = end.toLocaleDateString('en-US', opts);
+  if (start.getTime() === end.getTime()) return s;
+  return `${s} - ${e}`;
 }
 
 function renderIncidentKPICards() {

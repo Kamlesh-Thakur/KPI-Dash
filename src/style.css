@@ -423,6 +423,61 @@ body.sidebar-collapsed .nav-item span {
   box-shadow: 0 0 0 3px var(--accent-blue-glow);
 }
 
+.compare-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-primary);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.compare-toggle:hover {
+  border-color: var(--accent-blue);
+}
+
+.compare-toggle.active {
+  color: var(--accent-blue);
+  border-color: rgba(99, 132, 255, 0.45);
+  background: var(--accent-blue-glow);
+}
+
+.compare-switch {
+  width: 30px;
+  height: 16px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.4);
+  position: relative;
+  transition: background var(--transition-fast);
+}
+
+.compare-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ffffff;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform var(--transition-fast);
+}
+
+.compare-toggle.active .compare-switch {
+  background: rgba(99, 132, 255, 0.9);
+}
+
+.compare-toggle.active .compare-thumb {
+  transform: translateX(14px);
+}
+
 .theme-toggle-icon {
   font-size: 0.95rem;
   line-height: 1;
@@ -586,6 +641,44 @@ body.sidebar-collapsed .nav-item span {
 
 .kpi-change.up { color: var(--accent-green); }
 .kpi-change.down { color: var(--accent-red); }
+
+.kpi-compare {
+  margin-top: 8px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.compare-context {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-primary);
+  background: var(--bg-glass);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.compare-chip {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border-primary);
+  background: var(--bg-glass);
+  color: var(--text-secondary);
+}
+
+.compare-chip.up {
+  color: var(--accent-green);
+  border-color: rgba(52, 211, 153, 0.35);
+}
+
+.compare-chip.down {
+  color: var(--accent-red);
+  border-color: rgba(248, 113, 113, 0.35);
+}
 
 /* === Charts === */
 .charts-grid {

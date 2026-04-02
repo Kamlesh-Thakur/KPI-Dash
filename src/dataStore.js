@@ -247,41 +247,16 @@ export function loadTeamPerformanceData(workbook, XLSX) {
 
 /** Get filtered raw data */
 export function getFilteredRawData() {
-  let data = STATE.rawData;
   const f = STATE.filters;
-
-  if (f.division) {
-    data = data.filter(r => r['Division'] === f.division);
-  }
-  if (f.region) {
-    data = data.filter(r => r['Region'] === f.region);
-  }
-  if (f.branch) {
-    data = data.filter(r => r['Branch'] === f.branch);
-  }
-  if (f.taskType) {
-    data = data.filter(r => r['Task Type'] === f.taskType);
-  }
-  data = data.filter(r => isWithinDateFilter(getRowDate(r), f));
-  return data;
+  const ranged = getDateFilterRange();
+  return getFilteredRawDataForRange(ranged.start, ranged.end, f);
 }
 
 /** Get filtered incident data */
 export function getFilteredIncidentData() {
-  let data = STATE.incidentData;
   const f = STATE.filters;
-
-  if (f.division) {
-    data = data.filter(r => r['Division'] === f.division);
-  }
-  if (f.region) {
-    data = data.filter(r => r['Region'] === f.region);
-  }
-  if (f.branch) {
-    data = data.filter(r => (r['Branch_1'] || r['Branch']) === f.branch);
-  }
-  data = data.filter(r => isWithinDateFilter(getRowDate(r), f));
-  return data;
+  const ranged = getDateFilterRange();
+  return getFilteredIncidentDataForRange(ranged.start, ranged.end, f);
 }
 
 /** Set a filter value */
@@ -311,6 +286,79 @@ export function getBranchEfficiencyData() {
 
 export function getTeamPerformanceData() {
   return STATE.teamPerformance || { fsNew: [], rsAre: [] };
+}
+
+export function getDateFilterRange(filters = STATE.filters) {
+  const mode = filters.dateMode || 'overall';
+  const today = toDateOnly(new Date());
+  if (!today) return { start: null, end: null };
+
+  if (mode === 'custom') {
+    const from = parseDateInput(filters.dateFrom);
+    const to = parseDateInput(filters.dateTo);
+    return { start: from, end: to };
+  }
+
+  const anchor = parseDateInput(filters.dateAnchor) || today;
+  if (mode === 'daily') return { start: anchor, end: anchor };
+
+  if (mode === 'weekly') {
+    const start = new Date(anchor);
+    const day = start.getDay() || 7;
+    start.setDate(start.getDate() - (day - 1));
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    return { start, end };
+  }
+
+  if (mode === 'monthly') {
+    const start = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
+    const end = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
+    return { start, end };
+  }
+
+  // overall: derive full available range
+  const allDates = [...STATE.rawData, ...STATE.incidentData]
+    .map(getRowDate)
+    .filter(Boolean)
+    .sort((a, b) => a - b);
+  if (!allDates.length) return { start: null, end: null };
+  return { start: allDates[0], end: allDates[allDates.length - 1] };
+}
+
+export function getFilteredRawDataForRange(startDate, endDate, filters = STATE.filters) {
+  let data = applyRawDimensionFilters(STATE.rawData, filters);
+  if (!startDate || !endDate) return data;
+  return data.filter((r) => {
+    const d = getRowDate(r);
+    return d && d >= startDate && d <= endDate;
+  });
+}
+
+export function getFilteredIncidentDataForRange(startDate, endDate, filters = STATE.filters) {
+  let data = applyIncidentDimensionFilters(STATE.incidentData, filters);
+  if (!startDate || !endDate) return data;
+  return data.filter((r) => {
+    const d = getRowDate(r);
+    return d && d >= startDate && d <= endDate;
+  });
+}
+
+function applyRawDimensionFilters(data, filters) {
+  let out = data;
+  if (filters.division) out = out.filter(r => r['Division'] === filters.division);
+  if (filters.region) out = out.filter(r => r['Region'] === filters.region);
+  if (filters.branch) out = out.filter(r => r['Branch'] === filters.branch);
+  if (filters.taskType) out = out.filter(r => r['Task Type'] === filters.taskType);
+  return out;
+}
+
+function applyIncidentDimensionFilters(data, filters) {
+  let out = data;
+  if (filters.division) out = out.filter(r => r['Division'] === filters.division);
+  if (filters.region) out = out.filter(r => r['Region'] === filters.region);
+  if (filters.branch) out = out.filter(r => (r['Branch_1'] || r['Branch']) === filters.branch);
+  return out;
 }
 
 export default STATE;

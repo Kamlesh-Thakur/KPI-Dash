@@ -85,6 +85,10 @@
         <h1 class="page-title" id="page-title">Dashboard</h1>
       </div>
       <div class="header-right">
+        <button class="compare-toggle" id="compare-toggle" type="button" aria-pressed="false" title="Show comparisons">
+          <span class="compare-toggle-label">Compare</span>
+          <span class="compare-switch" aria-hidden="true"><span class="compare-thumb"></span></span>
+        </button>
         <div class="date-filter-group" id="date-filter-group">
           <select class="filter-select" id="filter-date-mode" aria-label="Date filter mode">
             <option value="overall">Overall</option>
@@ -122,6 +126,7 @@
 
     <!-- Dashboard Tab -->
     <section class="tab-content active" id="tab-dashboard">
+      <div class="compare-context" id="compare-context"></div>
       <div class="kpi-cards" id="kpi-cards"></div>
       <div class="charts-grid" id="charts-grid">
         <div class="chart-card chart-large" id="chart-tasks-trend"><div class="chart-loader"></div></div>
