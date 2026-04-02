@@ -5,6 +5,7 @@ import * as echarts from 'echarts';
 import {
   getFilteredRawData,
   getFilteredIncidentData,
+  getBranchEfficiencyData,
   excelDateToJS,
   formatDateShort
 } from './dataStore.js';
@@ -1354,6 +1355,130 @@ export function renderBranchClosureRates(containerId) {
       }
     ],
     animationDuration: 1200
+  });
+}
+
+export function renderBranchEfficiencyFromSheet(containerId) {
+  const { chart, titleEl } = getOrCreate(containerId) || {};
+  if (!chart) return;
+  setTitle(titleEl, 'Branch Efficiency (from Branch Effi.)', 'green');
+
+  const data = getBranchEfficiencyData()
+    .filter(r => r.efficiencyPerWorkingDay != null)
+    .sort((a, b) => (b.efficiencyPerWorkingDay - a.efficiencyPerWorkingDay))
+    .slice(0, 15);
+  const maxEfficiencyValue = Math.max(
+    1,
+    ...data.map(d => Number(d.efficiency) || 0),
+    ...data.map(d => Number(d.efficiencyPerWorkingDay) || 0)
+  );
+  const yAxisMax = Math.min(1.5, Math.max(1.05, maxEfficiencyValue * 1.08));
+
+  chart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      backgroundColor: 'rgba(17,24,39,0.95)',
+      borderColor: 'rgba(255,255,255,0.08)',
+      textStyle: { color: '#f1f5f9', fontSize: 12 },
+      formatter: (p) => {
+        const first = p[0];
+        const second = p[1];
+        return `${first.axisValue}<br/>Efficiency: ${(first.value * 100).toFixed(1)}%<br/>Efficiency (working day): ${(second.value * 100).toFixed(1)}%`;
+      }
+    },
+    legend: {
+      data: ['Efficiency', 'Efficiency (Working Day)'],
+      textStyle: { color: '#94a3b8', fontSize: 10 },
+      top: 0
+    },
+    grid: { left: 70, right: 30, top: 52, bottom: 64 },
+    xAxis: {
+      type: 'category',
+      data: data.map(d => d.branch),
+      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+      axisLabel: { color: '#94a3b8', fontSize: 9, rotate: 28 },
+      axisTick: { show: false }
+    },
+    yAxis: {
+      type: 'value',
+      min: 0,
+      max: yAxisMax,
+      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
+      axisLabel: { color: '#64748b', formatter: (v) => `${Math.round(v * 100)}%` }
+    },
+    series: [
+      {
+        name: 'Efficiency',
+        type: 'bar',
+        data: data.map(d => d.efficiency),
+        barMaxWidth: 24,
+        itemStyle: { color: COLORS.green, borderRadius: [4, 4, 0, 0] }
+      },
+      {
+        name: 'Efficiency (Working Day)',
+        type: 'line',
+        data: data.map(d => d.efficiencyPerWorkingDay),
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 5,
+        lineStyle: { color: COLORS.cyan, width: 2 },
+        itemStyle: { color: COLORS.cyan }
+      }
+    ],
+    animationDuration: 900
+  });
+}
+
+export function renderBranchWorkloadFromSheet(containerId) {
+  const { chart, titleEl } = getOrCreate(containerId) || {};
+  if (!chart) return;
+  setTitle(titleEl, 'Branch Workload (from Branch Effi.)', 'amber');
+
+  const base = getBranchEfficiencyData()
+    .filter(r => r.workload != null)
+    .sort((a, b) => (b.workload - a.workload));
+  const grandTotal = base.reduce((sum, r) => sum + (Number(r.workload) || 0), 0);
+  const data = [
+    { branch: 'Grand Total', workload: grandTotal },
+    ...base.slice(0, 14)
+  ];
+
+  chart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      backgroundColor: 'rgba(17,24,39,0.95)',
+      borderColor: 'rgba(255,255,255,0.08)',
+      textStyle: { color: '#f1f5f9', fontSize: 12 }
+    },
+    grid: { left: 100, right: 20, top: 16, bottom: 24 },
+    xAxis: {
+      type: 'value',
+      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
+      axisLabel: { color: '#64748b', fontSize: 10 }
+    },
+    yAxis: {
+      type: 'category',
+      data: data.map(d => d.branch).reverse(),
+      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+      axisLabel: { color: '#94a3b8', fontSize: 10 },
+      axisTick: { show: false }
+    },
+    series: [{
+      name: 'Total Workload',
+      type: 'bar',
+      data: data.map(d => d.workload).reverse(),
+      barMaxWidth: 18,
+      itemStyle: {
+        borderRadius: [0, 6, 6, 0],
+        color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+          { offset: 0, color: COLORS.amber },
+          { offset: 1, color: COLORS.orange }
+        ])
+      }
+    }],
+    animationDuration: 900
   });
 }
 

@@ -5,6 +5,7 @@
 const STATE = {
   rawData: [],
   incidentData: [],
+  branchEfficiency: [],
   branchMapping: [],
   dropdowns: [],
   filters: {
@@ -149,6 +150,31 @@ export function loadData(workbook, XLSX) {
     STATE.incidentData = json.map(r => cleanRow(r));
   }
 
+  // Branch Efficiency sheet
+  const branchEffSheet = workbook.Sheets['Branch Effi.'];
+  if (branchEffSheet) {
+    const rows = XLSX.utils.sheet_to_json(branchEffSheet, { header: 1, defval: '' });
+    const parsedRows = rows
+      .map((row) => {
+        const branch = (row[1] || '').toString().trim().replace(/\s+/g, ' ');
+        const efficiency = Number(row[2]);
+        const efficiencyPerWorkingDay = Number(row[3]);
+        const workload = Number(row[27]);
+        if (!branch || branch.toLowerCase() === 'branch' || branch.toLowerCase() === 'grand total' || Number.isNaN(efficiency)) return null;
+        return {
+          branch,
+          efficiency,
+          efficiencyPerWorkingDay: Number.isNaN(efficiencyPerWorkingDay) ? null : efficiencyPerWorkingDay,
+          workload: Number.isNaN(workload) ? null : workload
+        };
+      })
+      .filter(Boolean);
+    // Keep one row per branch name if sheet contains repeated summary sections.
+    const byBranch = new Map();
+    parsedRows.forEach((row) => byBranch.set(row.branch, row));
+    STATE.branchEfficiency = [...byBranch.values()];
+  }
+
   // Sheet2 — branch mappings
   const mapSheet = workbook.Sheets['Sheet2'];
   if (mapSheet) {
@@ -224,6 +250,10 @@ export function getUniqueValues(column, dataset = 'raw') {
 /** Get all state */
 export function getState() {
   return STATE;
+}
+
+export function getBranchEfficiencyData() {
+  return STATE.branchEfficiency || [];
 }
 
 export default STATE;
