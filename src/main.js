@@ -7,7 +7,7 @@ import { createGrid } from 'ag-grid-community';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-quartz.css';
 import {
-  loadData, getFilteredRawData, getFilteredIncidentData,
+  loadData, loadTeamPerformanceData, getFilteredRawData, getFilteredIncidentData,
   setFilter, getUniqueValues, formatNumber,
   excelDateToJS, formatDate, formatDuration, getState
 } from './dataStore.js';
@@ -20,6 +20,7 @@ import {
   renderIncidentComplexity, renderIncidentClosure,
   renderBranchPerformance, renderBranchClosureRates, renderBranchEfficiencyFromSheet, renderBranchWorkloadFromSheet,
   renderSameDayClosure, renderBranchTasksVolume,
+  renderTeamTopScores, renderTeamPerformanceByBranch, renderTeamOpsHealth,
   resizeCharts
 } from './charts.js';
 
@@ -68,8 +69,25 @@ async function autoLoadExcel() {
     }
     const buf = await response.arrayBuffer();
     processExcelBuffer(buf);
+    loadTeamPerformanceWorkbook();
   } catch (e) {
     console.log('No pre-loaded data file found. Use Import to load data.');
+  }
+}
+
+async function loadTeamPerformanceWorkbook() {
+  try {
+    const response = await fetch(`${import.meta.env.BASE_URL}data/team-performance-monthly.xlsx`);
+    if (!response.ok) return;
+    const buf = await response.arrayBuffer();
+    const workbook = XLSX.read(buf, { type: 'array' });
+    loadTeamPerformanceData(workbook, XLSX);
+    if (currentTab === 'team') {
+      renderTabContent('team');
+      resizeCharts();
+    }
+  } catch (e) {
+    console.log('No team performance workbook found in public/data.');
   }
 }
 
@@ -117,7 +135,8 @@ function switchTab(tab) {
     tasks: 'Task Data',
     incidents: 'Incidents',
     branch: 'Branch KPI',
-    support: 'Support KPI'
+    support: 'Support KPI',
+    team: 'Team Performance'
   };
   document.getElementById('page-title').textContent = titles[tab] || 'Dashboard';
 
@@ -531,6 +550,11 @@ function renderTabContent(tab) {
       renderImmediateSupportWindow('chart-immediate-support-window');
       renderRepeatedSupportByBranch('chart-repeated-support-branch');
       renderImmediateSupportByBranch('chart-immediate-support-branch');
+      break;
+    case 'team':
+      renderTeamTopScores('chart-team-top-scores');
+      renderTeamPerformanceByBranch('chart-team-branch-performance');
+      renderTeamOpsHealth('chart-team-ops-health');
       break;
   }
 }

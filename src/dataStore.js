@@ -6,6 +6,10 @@ const STATE = {
   rawData: [],
   incidentData: [],
   branchEfficiency: [],
+  teamPerformance: {
+    fsNew: [],
+    rsAre: []
+  },
   branchMapping: [],
   dropdowns: [],
   filters: {
@@ -192,6 +196,55 @@ export function loadData(workbook, XLSX) {
   return STATE;
 }
 
+export function loadTeamPerformanceData(workbook, XLSX) {
+  const fsSheet = workbook.Sheets['FS and New'];
+  if (fsSheet) {
+    const rows = XLSX.utils.sheet_to_json(fsSheet, { header: 1, defval: '' });
+    STATE.teamPerformance.fsNew = rows
+      .slice(4)
+      .map((row) => {
+        const rank = Number(row[0]);
+        const branch = (row[1] || '').toString().trim();
+        const region = (row[3] || '').toString().trim();
+        const agent = (row[4] || '').toString().trim();
+        const teamType = (row[5] || '').toString().trim();
+        const score = Number(row[6]);
+        if (Number.isNaN(rank) || !branch || !agent || Number.isNaN(score)) return null;
+        return { rank, branch, region, agent, teamType, score };
+      })
+      .filter(Boolean);
+  }
+
+  const rsSheet = workbook.Sheets[' RS and ARE'];
+  if (rsSheet) {
+    const rows = XLSX.utils.sheet_to_json(rsSheet, { header: 1, defval: '' });
+    STATE.teamPerformance.rsAre = rows
+      .slice(4)
+      .map((row) => {
+        const rank = Number(row[0]);
+        const branch = (row[1] || '').toString().trim();
+        const region = (row[3] || '').toString().trim();
+        const agent = (row[4] || '').toString().trim();
+        const team = (row[5] || '').toString().trim();
+        const workingDaysPct = Number(row[6]);
+        const taskHandledPct = Number(row[8]);
+        const avgTasksHandled = Number(row[9]);
+        if (Number.isNaN(rank) || !branch || !agent) return null;
+        return {
+          rank,
+          branch,
+          region,
+          agent,
+          team,
+          workingDaysPct: Number.isNaN(workingDaysPct) ? null : workingDaysPct,
+          taskHandledPct: Number.isNaN(taskHandledPct) ? null : taskHandledPct,
+          avgTasksHandled: Number.isNaN(avgTasksHandled) ? null : avgTasksHandled
+        };
+      })
+      .filter(Boolean);
+  }
+}
+
 /** Get filtered raw data */
 export function getFilteredRawData() {
   let data = STATE.rawData;
@@ -254,6 +307,10 @@ export function getState() {
 
 export function getBranchEfficiencyData() {
   return STATE.branchEfficiency || [];
+}
+
+export function getTeamPerformanceData() {
+  return STATE.teamPerformance || { fsNew: [], rsAre: [] };
 }
 
 export default STATE;

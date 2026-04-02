@@ -6,6 +6,7 @@ import {
   getFilteredRawData,
   getFilteredIncidentData,
   getBranchEfficiencyData,
+  getTeamPerformanceData,
   excelDateToJS,
   formatDateShort
 } from './dataStore.js';
@@ -749,6 +750,142 @@ function buildSupportByBranch(kind) {
     branches: sorted.map(s => s.branch),
     seriesByWindow: [0, 1, 2, 3].map(i => sorted.map(s => s.values[i]))
   };
+}
+
+export function renderTeamTopScores(containerId) {
+  const { chart, titleEl } = getOrCreate(containerId) || {};
+  if (!chart) return;
+  setTitle(titleEl, 'Top Team Scores (FS & New)', 'blue');
+
+  const { fsNew } = getTeamPerformanceData();
+  const top = (fsNew || [])
+    .slice()
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 12);
+
+  chart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      backgroundColor: 'rgba(17,24,39,0.95)',
+      borderColor: 'rgba(255,255,255,0.08)',
+      textStyle: { color: '#f1f5f9', fontSize: 12 },
+      formatter: (p) => {
+        const d = top[p[0].dataIndex];
+        return `${d.agent}<br/>Branch: ${d.branch}<br/>Score: ${(d.score * 100).toFixed(1)}%`;
+      }
+    },
+    grid: { left: 180, right: 20, top: 16, bottom: 24 },
+    xAxis: {
+      type: 'value',
+      min: 0,
+      max: 1,
+      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
+      axisLabel: { color: '#64748b', formatter: (v) => `${Math.round(v * 100)}%` }
+    },
+    yAxis: {
+      type: 'category',
+      data: top.map(r => r.agent.split('[')[0].trim()).reverse(),
+      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+      axisLabel: { color: '#94a3b8', fontSize: 10, width: 260, overflow: 'truncate' },
+      axisTick: { show: false }
+    },
+    series: [{
+      name: 'Obtained Score',
+      type: 'bar',
+      data: top.map(r => r.score).reverse(),
+      barMaxWidth: 16,
+      itemStyle: {
+        borderRadius: [0, 6, 6, 0],
+        color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+          { offset: 0, color: COLORS.blue },
+          { offset: 1, color: COLORS.purple }
+        ])
+      }
+    }],
+    animationDuration: 900
+  });
+}
+
+export function renderTeamPerformanceByBranch(containerId) {
+  const { chart, titleEl } = getOrCreate(containerId) || {};
+  if (!chart) return;
+  setTitle(titleEl, 'Branch Team Performance (Avg Score)', 'green');
+
+  const { fsNew } = getTeamPerformanceData();
+  const byBranch = {};
+  (fsNew || []).forEach((r) => {
+    if (!byBranch[r.branch]) byBranch[r.branch] = { total: 0, count: 0 };
+    byBranch[r.branch].total += r.score;
+    byBranch[r.branch].count += 1;
+  });
+  const rows = Object.entries(byBranch)
+    .map(([branch, v]) => ({ branch, avg: v.count ? v.total / v.count : 0, teams: v.count }))
+    .sort((a, b) => b.avg - a.avg)
+    .slice(0, 12);
+
+  chart.setOption({
+    tooltip: { trigger: 'axis', backgroundColor: 'rgba(17,24,39,0.95)', borderColor: 'rgba(255,255,255,0.08)', textStyle: { color: '#f1f5f9', fontSize: 12 } },
+    grid: { left: 50, right: 20, top: 20, bottom: 45 },
+    xAxis: {
+      type: 'category',
+      data: rows.map(r => r.branch),
+      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+      axisLabel: { color: '#94a3b8', fontSize: 10, rotate: 30 },
+      axisTick: { show: false }
+    },
+    yAxis: {
+      type: 'value',
+      min: 0,
+      max: 1,
+      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
+      axisLabel: { color: '#64748b', formatter: (v) => `${Math.round(v * 100)}%` }
+    },
+    series: [{
+      name: 'Avg Score',
+      type: 'bar',
+      data: rows.map(r => r.avg),
+      barMaxWidth: 24,
+      itemStyle: { color: COLORS.green, borderRadius: [4, 4, 0, 0] }
+    }],
+    animationDuration: 900
+  });
+}
+
+export function renderTeamOpsHealth(containerId) {
+  const { chart, titleEl } = getOrCreate(containerId) || {};
+  if (!chart) return;
+  setTitle(titleEl, 'Operations Health (RS & ARE)', 'amber');
+
+  const { rsAre } = getTeamPerformanceData();
+  const items = (rsAre || []).slice(0, 20);
+  const avgWorkingDays = avg(items.map(r => r.workingDaysPct));
+  const avgTaskHandledPct = avg(items.map(r => r.taskHandledPct));
+  const avgTaskHandled = avg(items.map(r => r.avgTasksHandled));
+
+  chart.setOption({
+    tooltip: { trigger: 'item', backgroundColor: 'rgba(17,24,39,0.95)', borderColor: 'rgba(255,255,255,0.08)', textStyle: { color: '#f1f5f9', fontSize: 12 } },
+    grid: { left: 40, right: 20, top: 20, bottom: 25 },
+    xAxis: { type: 'category', data: ['Working Days %', 'Task Handled %', 'Avg Tasks/Day'], axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } }, axisLabel: { color: '#94a3b8' }, axisTick: { show: false } },
+    yAxis: { type: 'value', splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }, axisLabel: { color: '#64748b' } },
+    series: [{
+      type: 'bar',
+      data: [avgWorkingDays * 100, avgTaskHandledPct * 100, avgTaskHandled],
+      barMaxWidth: 46,
+      itemStyle: {
+        color: (p) => [COLORS.amber, COLORS.orange, COLORS.blue][p.dataIndex],
+        borderRadius: [6, 6, 0, 0]
+      },
+      label: { show: true, position: 'top', color: '#94a3b8', formatter: (p) => (p.dataIndex < 2 ? `${p.value.toFixed(1)}%` : `${p.value.toFixed(1)}`) }
+    }],
+    animationDuration: 900
+  });
+}
+
+function avg(values) {
+  const clean = values.filter(v => typeof v === 'number' && !Number.isNaN(v));
+  if (!clean.length) return 0;
+  return clean.reduce((a, b) => a + b, 0) / clean.length;
 }
 
 function isPositiveFlag(value) {
