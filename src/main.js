@@ -14,7 +14,7 @@ import {
 import {
   renderTasksTrend, renderTaskTypePie, renderRegionBar,
   renderPriorityDist, renderSLAGauge, renderBranchHeatmap, renderTaskTypeResolutionTargets,
-  renderRepeatedSupportWindow, renderImmediateSupportWindow,
+  renderRepeatedSupportWindow, renderImmediateSupportWindow, renderRepeatedSupportByBranch, renderImmediateSupportByBranch,
   renderTaskKPIBars,
   renderIncidentTrend, renderIncidentCategory,
   renderIncidentComplexity, renderIncidentClosure,
@@ -30,7 +30,7 @@ let tasksGridApi = null;
 let incidentsGridApi = null;
 let currentTab = 'dashboard';
 let dataLoaded = false;
-let currentTheme = localStorage.getItem('kpi-theme') || 'dark';
+let currentTheme = 'dark';
 
 // ==========================================
 // INIT
@@ -116,7 +116,8 @@ function switchTab(tab) {
     dashboard: 'Dashboard',
     tasks: 'Task Data',
     incidents: 'Incidents',
-    branch: 'Branch KPI'
+    branch: 'Branch KPI',
+    support: 'Support KPI'
   };
   document.getElementById('page-title').textContent = titles[tab] || 'Dashboard';
 
@@ -346,6 +347,7 @@ function initExport() {
 // ==========================================
 const MOBILE_NAV_MQ = window.matchMedia('(max-width: 768px)');
 const SIDEBAR_COLLAPSE_KEY = 'kpi-sidebar-collapsed';
+const THEME_COOKIE_KEY = 'kpi-theme';
 
 function isMobileNavLayout() {
   return MOBILE_NAV_MQ.matches;
@@ -401,7 +403,7 @@ function setSidebarCollapsed(collapsed) {
     return;
   }
   document.body.classList.toggle('sidebar-collapsed', collapsed);
-  localStorage.setItem(SIDEBAR_COLLAPSE_KEY, collapsed ? '1' : '0');
+  setCookie(SIDEBAR_COLLAPSE_KEY, collapsed ? '1' : '0');
   const collapseBtn = document.getElementById('sidebar-collapse-toggle');
   if (collapseBtn) {
     collapseBtn.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
@@ -416,7 +418,7 @@ function initSidebarCollapse() {
   const collapseBtn = document.getElementById('sidebar-collapse-toggle');
   if (!collapseBtn) return;
 
-  const initialCollapsed = localStorage.getItem(SIDEBAR_COLLAPSE_KEY) === '1';
+  const initialCollapsed = getCookie(SIDEBAR_COLLAPSE_KEY) === '1';
   setSidebarCollapsed(initialCollapsed);
 
   collapseBtn.addEventListener('click', () => {
@@ -428,7 +430,7 @@ function initSidebarCollapse() {
     if (e.matches) {
       document.body.classList.remove('sidebar-collapsed');
     } else {
-      const persisted = localStorage.getItem(SIDEBAR_COLLAPSE_KEY) === '1';
+      const persisted = getCookie(SIDEBAR_COLLAPSE_KEY) === '1';
       setSidebarCollapsed(persisted);
     }
   });
@@ -438,6 +440,7 @@ function initSidebarCollapse() {
 // THEME
 // ==========================================
 function initTheme() {
+  currentTheme = getCookie(THEME_COOKIE_KEY) || 'dark';
   applyTheme(currentTheme);
 
   const themeToggle = document.getElementById('theme-toggle');
@@ -452,7 +455,7 @@ function initTheme() {
 function applyTheme(theme) {
   currentTheme = theme === 'light' ? 'light' : 'dark';
   document.body.classList.toggle('theme-light', currentTheme === 'light');
-  localStorage.setItem('kpi-theme', currentTheme);
+  setCookie(THEME_COOKIE_KEY, currentTheme);
   updateThemeToggleUI();
   updateGridThemes();
   if (dataLoaded) {
@@ -464,12 +467,10 @@ function applyTheme(theme) {
 function updateThemeToggleUI() {
   const themeToggle = document.getElementById('theme-toggle');
   const themeIcon = document.getElementById('theme-toggle-icon');
-  const themeLabel = document.getElementById('theme-toggle-label');
-  if (!themeToggle || !themeIcon || !themeLabel) return;
+  if (!themeToggle || !themeIcon) return;
 
   const isLight = currentTheme === 'light';
   themeIcon.textContent = isLight ? '☀️' : '🌙';
-  themeLabel.textContent = isLight ? 'Light' : 'Dark';
   const target = isLight ? 'dark' : 'light';
   themeToggle.setAttribute('aria-label', `Switch to ${target} mode`);
   themeToggle.setAttribute('title', `Switch to ${target} mode`);
@@ -506,8 +507,6 @@ function renderTabContent(tab) {
       renderBranchHeatmap('chart-branch-heatmap');
       renderTaskKPIBars('chart-task-kpi-bars');
       renderTaskTypeResolutionTargets('chart-type-resolution-targets');
-      renderRepeatedSupportWindow('chart-repeated-support-window');
-      renderImmediateSupportWindow('chart-immediate-support-window');
       break;
     case 'tasks':
       renderTasksGrid();
@@ -525,7 +524,23 @@ function renderTabContent(tab) {
       renderSameDayClosure('chart-same-day-closure');
       renderBranchTasksVolume('chart-branch-tasks-volume');
       break;
+    case 'support':
+      renderRepeatedSupportWindow('chart-repeated-support-window');
+      renderImmediateSupportWindow('chart-immediate-support-window');
+      renderRepeatedSupportByBranch('chart-repeated-support-branch');
+      renderImmediateSupportByBranch('chart-immediate-support-branch');
+      break;
   }
+}
+
+function setCookie(name, value, maxAgeSeconds = 31536000) {
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAgeSeconds}; SameSite=Lax`;
+}
+
+function getCookie(name) {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = document.cookie.match(new RegExp(`(?:^|; )${escaped}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : '';
 }
 
 // ==========================================

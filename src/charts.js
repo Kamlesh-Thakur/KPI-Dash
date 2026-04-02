@@ -657,6 +657,99 @@ export function renderImmediateSupportWindow(containerId) {
   });
 }
 
+export function renderRepeatedSupportByBranch(containerId) {
+  const { chart, titleEl } = getOrCreate(containerId) || {};
+  if (!chart) return;
+  setTitle(titleEl, 'Repeated Support by Branch (Top 12)', 'amber');
+
+  const { branches, seriesByWindow } = buildSupportByBranch('repeated');
+  renderSupportBranchChart(chart, branches, seriesByWindow);
+}
+
+export function renderImmediateSupportByBranch(containerId) {
+  const { chart, titleEl } = getOrCreate(containerId) || {};
+  if (!chart) return;
+  setTitle(titleEl, 'Immediate Support by Branch (Top 12)', 'cyan');
+
+  const { branches, seriesByWindow } = buildSupportByBranch('immediate');
+  renderSupportBranchChart(chart, branches, seriesByWindow);
+}
+
+function renderSupportBranchChart(chart, branches, seriesByWindow) {
+  chart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      backgroundColor: 'rgba(17,24,39,0.95)',
+      borderColor: 'rgba(255,255,255,0.08)',
+      textStyle: { color: '#f1f5f9', fontSize: 12 }
+    },
+    legend: {
+      data: ['Within 1 day', 'Within 3 days', 'Within 7 days', 'Within 30 days'],
+      textStyle: { color: '#94a3b8', fontSize: 10 },
+      top: 0
+    },
+    grid: { left: 95, right: 20, top: 34, bottom: 24 },
+    xAxis: {
+      type: 'value',
+      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
+      axisLabel: { color: '#64748b', fontSize: 10 }
+    },
+    yAxis: {
+      type: 'category',
+      data: branches.reverse(),
+      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+      axisLabel: { color: '#94a3b8', fontSize: 10 },
+      axisTick: { show: false }
+    },
+    series: [
+      { name: 'Within 1 day', type: 'bar', stack: 'total', data: seriesByWindow[0].slice().reverse(), itemStyle: { color: COLORS.green } },
+      { name: 'Within 3 days', type: 'bar', stack: 'total', data: seriesByWindow[1].slice().reverse(), itemStyle: { color: COLORS.cyan } },
+      { name: 'Within 7 days', type: 'bar', stack: 'total', data: seriesByWindow[2].slice().reverse(), itemStyle: { color: COLORS.blue } },
+      { name: 'Within 30 days', type: 'bar', stack: 'total', data: seriesByWindow[3].slice().reverse(), itemStyle: { color: COLORS.amber } }
+    ],
+    animationDuration: 900
+  });
+}
+
+function buildSupportByBranch(kind) {
+  const data = getFilteredRawData();
+  const keys = kind === 'repeated'
+    ? [
+      'Repeated Fiber Support (yes/No), within 1 days',
+      'Repeated Fiber Support (yes/No), within 3 days',
+      'Repeated Fiber Support (yes/No), within 7 days',
+      'Repeated Fiber Support (yes/No), within 30 days'
+    ]
+    : [
+      'Immediate Fiber support (yes/No), within 1 days',
+      'Immediate Fiber support (yes/No), within 3 days',
+      'Immediate fiber support (yes/No), within 7 days',
+      'Immediate fiber support (yes/No), within 30 days'
+    ];
+
+  const branchMap = {};
+  data.forEach((row) => {
+    const branch = row['Branch'] || 'N/A';
+    if (!branchMap[branch]) {
+      branchMap[branch] = [0, 0, 0, 0];
+    }
+    keys.forEach((key, idx) => {
+      if (isPositiveFlag(row[key])) branchMap[branch][idx] += 1;
+    });
+  });
+
+  const sorted = Object.entries(branchMap)
+    .map(([branch, values]) => ({ branch, values, total: values.reduce((a, b) => a + b, 0) }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 12);
+
+  return {
+    branches: sorted.map(s => s.branch),
+    seriesByWindow: [0, 1, 2, 3].map(i => sorted.map(s => s.values[i]))
+  };
+}
+
 function isPositiveFlag(value) {
   if (value === true || value === 1) return true;
   const text = (value ?? '').toString().trim().toLowerCase();

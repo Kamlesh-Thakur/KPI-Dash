@@ -11,6 +11,23 @@
   <link rel="stylesheet" href="/src/style.css" />
 </head>
 <body>
+  <script>
+    (function () {
+      const cookies = document.cookie || '';
+      const getCookie = (name) => {
+        const match = cookies.match(new RegExp('(?:^|; )' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]*)'));
+        return match ? decodeURIComponent(match[1]) : '';
+      };
+      const collapsed = getCookie('kpi-sidebar-collapsed') === '1';
+      const theme = getCookie('kpi-theme');
+      if (theme === 'light') {
+        document.body.classList.add('theme-light');
+      }
+      if (collapsed && !window.matchMedia('(max-width: 768px)').matches) {
+        document.body.classList.add('sidebar-collapsed');
+      }
+    })();
+  </script>
   <div class="sidebar-backdrop" id="sidebar-backdrop" aria-hidden="true"></div>
   <!-- Sidebar -->
   <aside class="sidebar" id="sidebar">
@@ -43,6 +60,10 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
         <span>Branch KPI</span>
       </button>
+      <button class="nav-item" data-tab="support" id="nav-support">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18"/><path d="M3 12h18"/><path d="m5 5 14 14"/><path d="m19 5-14 14"/></svg>
+        <span>Support KPI</span>
+      </button>
     </nav>
     <div class="sidebar-footer">
       <div class="upload-area" id="upload-area">
@@ -68,10 +89,6 @@
         <h1 class="page-title" id="page-title">Dashboard</h1>
       </div>
       <div class="header-right">
-        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to light mode" title="Switch to light mode">
-          <span class="theme-toggle-icon" id="theme-toggle-icon" aria-hidden="true">🌙</span>
-          <span class="theme-toggle-label" id="theme-toggle-label">Dark</span>
-        </button>
         <div class="date-filter-group" id="date-filter-group">
           <select class="filter-select" id="filter-date-mode" aria-label="Date filter mode">
             <option value="overall">Overall</option>
@@ -101,6 +118,9 @@
             <option value="">All Task Types</option>
           </select>
         </div>
+        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to light mode" title="Switch to light mode">
+          <span class="theme-toggle-icon" id="theme-toggle-icon" aria-hidden="true">🌙</span>
+        </button>
       </div>
     </header>
 
@@ -112,8 +132,6 @@
         <div class="chart-card chart-large" id="chart-task-type-pie"><div class="chart-loader"></div></div>
         <div class="chart-card chart-large" id="chart-task-kpi-bars"><div class="chart-loader"></div></div>
         <div class="chart-card chart-large" id="chart-type-resolution-targets"><div class="chart-loader"></div></div>
-        <div class="chart-card chart-large" id="chart-repeated-support-window"><div class="chart-loader"></div></div>
-        <div class="chart-card chart-large" id="chart-immediate-support-window"><div class="chart-loader"></div></div>
         <div class="chart-card" id="chart-region-bar"><div class="chart-loader"></div></div>
         <div class="chart-card" id="chart-priority-dist"><div class="chart-loader"></div></div>
         <div class="chart-card" id="chart-sla-gauge"><div class="chart-loader"></div></div>
@@ -171,6 +189,16 @@
           <div class="chart-card chart-large" id="chart-same-day-closure"><div class="chart-loader"></div></div>
           <div class="chart-card chart-large" id="chart-branch-tasks-volume"><div class="chart-loader"></div></div>
         </div>
+      </div>
+    </section>
+
+    <!-- Support KPI Tab -->
+    <section class="tab-content" id="tab-support">
+      <div class="charts-grid">
+        <div class="chart-card chart-large" id="chart-repeated-support-window"><div class="chart-loader"></div></div>
+        <div class="chart-card chart-large" id="chart-immediate-support-window"><div class="chart-loader"></div></div>
+        <div class="chart-card chart-large" id="chart-repeated-support-branch"><div class="chart-loader"></div></div>
+        <div class="chart-card chart-large" id="chart-immediate-support-branch"><div class="chart-loader"></div></div>
       </div>
     </section>
   </main>

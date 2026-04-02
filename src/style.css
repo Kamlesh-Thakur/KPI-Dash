@@ -130,6 +130,7 @@ body {
   top: 0;
   z-index: 100;
   transition: width var(--transition-slow), transform var(--transition-slow);
+  overflow: hidden;
 }
 
 .sidebar-brand {
@@ -321,8 +322,7 @@ body.sidebar-collapsed .sidebar-brand {
 }
 
 body.sidebar-collapsed .brand-text,
-body.sidebar-collapsed .sidebar-footer,
-body.sidebar-collapsed .sidebar-collapse-toggle svg {
+body.sidebar-collapsed .sidebar-footer {
   display: none;
 }
 
@@ -334,19 +334,22 @@ body.sidebar-collapsed .sidebar-collapse-toggle {
   transform: translateX(-50%);
 }
 
-body.sidebar-collapsed .sidebar-collapse-toggle::before {
-  content: '>';
-  font-size: 13px;
-  font-weight: 700;
+body.sidebar-collapsed .sidebar-collapse-toggle svg {
+  transform: rotate(180deg);
 }
 
 body.sidebar-collapsed .sidebar-nav {
-  padding: 12px 8px;
+  padding: 12px 0;
+  align-items: center;
 }
 
 body.sidebar-collapsed .nav-item {
+  width: 44px;
+  height: 44px;
   justify-content: center;
-  padding: 12px 10px;
+  padding: 0;
+  border-radius: 12px;
+  box-shadow: none;
 }
 
 body.sidebar-collapsed .nav-item span {
@@ -402,14 +405,14 @@ body.sidebar-collapsed .nav-item span {
 .theme-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-primary);
   background: var(--bg-input);
   color: var(--text-primary);
-  font-size: 0.82rem;
-  font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-fast);
   font-family: inherit;
