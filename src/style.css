@@ -28,6 +28,9 @@
   --accent-amber: #fbbf24;
   --accent-red: #f87171;
   --accent-pink: #f472b6;
+  --accent-teal: #2dd4bf;
+  --accent-indigo: #818cf8;
+  --accent-emerald: #4ade80;
 
   --gradient-primary: linear-gradient(135deg, #6384ff, #a78bfa);
   --gradient-green: linear-gradient(135deg, #34d399, #22d3ee);
@@ -661,39 +664,174 @@ body.theme-light .kpi-section--incidents .kpi-section-label {
 }
 
 .kpi-section-inner .kpi-card {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  gap: 6px;
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto auto;
+  column-gap: 10px;
+  row-gap: 6px;
+  align-content: start;
+  justify-items: start;
   min-height: 100%;
   min-width: 0;
-  padding: 14px 10px;
+  padding: 14px 12px 16px 14px;
+}
+
+/* Soft accent on the right — uses card color (see below) */
+.kpi-section-inner .kpi-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 58%;
+  border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.55;
+}
+
+.kpi-section-inner .kpi-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.kpi-section-inner .kpi-card::before {
+  z-index: 2;
+}
+
+.kpi-section-inner .kpi-card.blue::after {
+  background: radial-gradient(ellipse 95% 115% at 100% 45%, rgba(96, 165, 250, 0.2), transparent 62%);
+}
+
+.kpi-section-inner .kpi-card.cyan::after {
+  background: radial-gradient(ellipse 95% 115% at 100% 45%, rgba(56, 189, 248, 0.2), transparent 62%);
+}
+
+.kpi-section-inner .kpi-card.purple::after {
+  background: radial-gradient(ellipse 95% 115% at 100% 45%, rgba(192, 132, 252, 0.22), transparent 62%);
+}
+
+.kpi-section-inner .kpi-card.indigo::after {
+  background: radial-gradient(ellipse 95% 115% at 100% 45%, rgba(129, 140, 248, 0.22), transparent 62%);
+}
+
+.kpi-section-inner .kpi-card.emerald::after {
+  background: radial-gradient(ellipse 95% 115% at 100% 45%, rgba(74, 222, 128, 0.2), transparent 62%);
+}
+
+.kpi-section-inner .kpi-card.amber::after {
+  background: radial-gradient(ellipse 95% 115% at 100% 45%, rgba(251, 191, 36, 0.18), transparent 62%);
+}
+
+.kpi-section-inner .kpi-card.red::after {
+  background: radial-gradient(ellipse 95% 115% at 100% 45%, rgba(251, 113, 133, 0.2), transparent 62%);
+}
+
+/* Dashboard KPI strip: clearer separation + softer gradients */
+.kpi-section-inner .kpi-card.blue::before {
+  background: linear-gradient(135deg, #5b7cff, #8b8cff);
+}
+
+.kpi-section-inner .kpi-card.cyan::before {
+  background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+}
+
+.kpi-section-inner .kpi-card.purple::before {
+  background: linear-gradient(135deg, #a855f7, #d8b4fe);
+}
+
+.kpi-section-inner .kpi-card.indigo::before {
+  background: linear-gradient(135deg, #4f46e5, #a5b4fc);
+}
+
+.kpi-section-inner .kpi-card.emerald::before {
+  background: linear-gradient(135deg, #047857, #4ade80);
+}
+
+.kpi-section-inner .kpi-card.amber::before {
+  background: linear-gradient(135deg, #ea580c, #fbbf24);
+}
+
+.kpi-section-inner .kpi-card.red::before {
+  background: linear-gradient(135deg, #e11d48, #fb7185);
+}
+
+.kpi-section-inner .kpi-card.blue .kpi-value { color: #93b4ff; }
+.kpi-section-inner .kpi-card.cyan .kpi-value { color: #5ddbff; }
+.kpi-section-inner .kpi-card.purple .kpi-value { color: #e9d5ff; }
+.kpi-section-inner .kpi-card.indigo .kpi-value { color: #c7d2fe; }
+.kpi-section-inner .kpi-card.emerald .kpi-value { color: #86efac; }
+.kpi-section-inner .kpi-card.amber .kpi-value { color: #fde047; }
+.kpi-section-inner .kpi-card.red .kpi-value { color: #fda4af; }
+
+body.theme-light .kpi-section-inner .kpi-card::after {
+  opacity: 0.4;
 }
 
 .kpi-section-inner .kpi-label {
-  font-size: 0.62rem;
-  letter-spacing: 0.35px;
+  grid-column: 1 / -1;
+  grid-row: 1;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
   margin-bottom: 0;
-  line-height: 1.2;
+  line-height: 1.3;
+  max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+body.theme-light .kpi-section-inner .kpi-label {
+  color: var(--text-primary);
+  opacity: 0.82;
+}
+
+body.theme-light .kpi-section-inner .kpi-card.blue .kpi-value { color: #2563eb; }
+body.theme-light .kpi-section-inner .kpi-card.cyan .kpi-value { color: #0284c7; }
+body.theme-light .kpi-section-inner .kpi-card.purple .kpi-value { color: #9333ea; }
+body.theme-light .kpi-section-inner .kpi-card.indigo .kpi-value { color: #4f46e5; }
+body.theme-light .kpi-section-inner .kpi-card.emerald .kpi-value { color: #059669; }
+body.theme-light .kpi-section-inner .kpi-card.amber .kpi-value { color: #d97706; }
+body.theme-light .kpi-section-inner .kpi-card.red .kpi-value { color: #e11d48; }
+
 .kpi-section-inner .kpi-value {
-  font-size: 1.28rem;
+  grid-column: 2;
+  grid-row: 2;
+  justify-self: end;
+  align-self: end;
+  text-align: right;
+  font-size: clamp(1.32rem, 1.1vw + 1rem, 1.78rem);
+  font-weight: 800;
+  line-height: 1.05;
   margin-bottom: 0;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 
 .kpi-section-inner .kpi-change {
-  font-size: 0.65rem;
+  grid-column: 2;
+  grid-row: 3;
+  justify-self: end;
+  align-self: start;
+  text-align: right;
+  justify-content: flex-end;
+  font-size: 0.66rem;
+  max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  opacity: 0.92;
 }
 
 .kpi-section-inner .kpi-compare {
-  margin-top: 6px;
+  grid-column: 1 / -1;
+  grid-row: 4;
+  margin-top: 8px;
+  justify-content: flex-end;
   gap: 4px;
 }
 
@@ -729,6 +867,9 @@ body.theme-light .kpi-section--incidents .kpi-section-label {
 .kpi-card.red::before { background: var(--gradient-red); }
 .kpi-card.purple::before { background: linear-gradient(135deg, #a78bfa, #c084fc); }
 .kpi-card.cyan::before { background: linear-gradient(135deg, #22d3ee, #67e8f9); }
+.kpi-card.teal::before { background: linear-gradient(135deg, #2dd4bf, #5eead4); }
+.kpi-card.indigo::before { background: linear-gradient(135deg, #6366f1, #a5b4fc); }
+.kpi-card.emerald::before { background: linear-gradient(135deg, #059669, #4ade80); }
 
 .kpi-card:hover {
   transform: translateY(-3px);
@@ -758,6 +899,9 @@ body.theme-light .kpi-section--incidents .kpi-section-label {
 .kpi-card.red .kpi-value { color: var(--accent-red); }
 .kpi-card.purple .kpi-value { color: var(--accent-purple); }
 .kpi-card.cyan .kpi-value { color: var(--accent-cyan); }
+.kpi-card.teal .kpi-value { color: var(--accent-teal); }
+.kpi-card.indigo .kpi-value { color: var(--accent-indigo); }
+.kpi-card.emerald .kpi-value { color: var(--accent-emerald); }
 
 .kpi-change {
   font-size: 0.78rem;
