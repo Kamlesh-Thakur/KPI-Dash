@@ -14,7 +14,7 @@ import {
 } from './dataStore.js';
 import {
   renderTasksTrend, renderTaskTypePie,
-  renderPriorityDist, renderBranchHeatmap, renderTaskTypeResolutionTargets,
+  renderPriorityDist, renderTaskTypeResolutionTargets,
   renderRepeatedSupportWindow, renderImmediateSupportWindow, renderRepeatedSupportByBranch, renderImmediateSupportByBranch,
   renderIncidentTrend, renderIncidentCategory,
   renderIncidentComplexity, renderIncidentClosure,
@@ -547,7 +547,7 @@ function renderTabContent(tab) {
       renderIncidentCategory('chart-incident-category-dashboard');
       renderIncidentComplexity('chart-incident-complexity-dashboard');
       renderPriorityDist('chart-priority-dist');
-      renderBranchHeatmap('chart-branch-heatmap');
+      renderBranchTasksVolume('chart-branch-heatmap');
       renderTaskTypeResolutionTargets('chart-type-resolution-targets');
       break;
     case 'tasks':
@@ -672,82 +672,82 @@ function renderKPICards() {
   }
 
   container.innerHTML = `
-    <div class="kpi-section kpi-section--tasks">
+    <div class="kpi-section kpi-section--tasks" role="group" aria-label="Tasks KPIs">
       <div class="kpi-section-label">Tasks</div>
       <div class="kpi-section-inner">
-        <div class="kpi-card blue">
+        <div class="kpi-card blue" title="Total Tasks — count for current filters">
           <div class="kpi-label">Total Tasks</div>
           <div class="kpi-value">${formatNumber(total)}</div>
-          <div class="kpi-change">${taskTypes} task types</div>
+          <div class="kpi-change">${taskTypes} types</div>
           ${showComparisons ? renderCompareRow(compare.tasks.total, false) : ''}
         </div>
-        <div class="kpi-card cyan">
-          <div class="kpi-label">Task Closed Inside 4h</div>
+        <div class="kpi-card cyan" title="Task closed within 4 hours (duration)">
+          <div class="kpi-label">≤4h</div>
           <div class="kpi-value">${total > 0 ? Math.round(taskM.within4hRate) : 0}%</div>
-          <div class="kpi-change up">${formatNumber(taskM.within4h)} of ${formatNumber(total)}</div>
+          <div class="kpi-change up">${formatNumber(taskM.within4h)} / ${formatNumber(total)}</div>
           ${showComparisons ? renderCompareRow(compare.tasks.within4hRate, true) : ''}
         </div>
-        <div class="kpi-card purple">
-          <div class="kpi-label">Task Closed Inside 24h</div>
+        <div class="kpi-card purple" title="Task closed within 24 hours (duration)">
+          <div class="kpi-label">≤24h</div>
           <div class="kpi-value">${total > 0 ? Math.round(taskM.within24hRate) : 0}%</div>
-          <div class="kpi-change up">${formatNumber(taskM.within24h)} of ${formatNumber(total)}</div>
+          <div class="kpi-change up">${formatNumber(taskM.within24h)} / ${formatNumber(total)}</div>
           ${showComparisons ? renderCompareRow(compare.tasks.within24hRate, true) : ''}
         </div>
-        <div class="kpi-card green">
-          <div class="kpi-label">Task KPI After Exclusion</div>
+        <div class="kpi-card green" title="KPI after exclusion — Exceptions contains &quot;consider&quot;">
+          <div class="kpi-label">KPI After Excl.</div>
           <div class="kpi-value">${total > 0 ? Math.round(taskM.kpiExclusionRate) : 0}%</div>
-          <div class="kpi-change up">${formatNumber(taskM.kpiExclusion)} of ${formatNumber(total)}</div>
+          <div class="kpi-change up">${formatNumber(taskM.kpiExclusion)} / ${formatNumber(total)}</div>
           ${showComparisons ? renderCompareRow(compare.tasks.kpiExclusionRate, true) : ''}
         </div>
-        <div class="kpi-card green">
-          <div class="kpi-label">Same-Day Closure</div>
+        <div class="kpi-card green" title="Same-day closure">
+          <div class="kpi-label">Same Day</div>
           <div class="kpi-value">${sameDayRate}%</div>
-          <div class="kpi-change up">${formatNumber(sameDay)} of ${formatNumber(total)}</div>
+          <div class="kpi-change up">${formatNumber(sameDay)} / ${formatNumber(total)}</div>
           ${showComparisons ? renderCompareRow(compare.tasks.sameDayRate, true) : ''}
         </div>
-        <div class="kpi-card amber">
-          <div class="kpi-label">Average Duration</div>
+        <div class="kpi-card amber" title="Average task duration">
+          <div class="kpi-label">Avg Duration</div>
           <div class="kpi-value">${formatDuration(avgDuration)}</div>
           <div class="kpi-change">per task</div>
           ${showComparisons ? renderCompareRow(compare.tasks.avgDuration, true) : ''}
         </div>
       </div>
     </div>
-    <div class="kpi-section kpi-section--incidents">
+    <div class="kpi-section kpi-section--incidents" role="group" aria-label="Incidents KPIs">
       <div class="kpi-section-label">Incidents</div>
       <div class="kpi-section-inner">
-        <div class="kpi-card red">
-          <div class="kpi-label">Total Incidents</div>
+        <div class="kpi-card red" title="Total incidents — fiber network">
+          <div class="kpi-label">Total</div>
           <div class="kpi-value">${formatNumber(incidentTotal)}</div>
           <div class="kpi-change">fiber network</div>
           ${showComparisons ? renderCompareRow(compare.incidents.total, false) : ''}
         </div>
-        <div class="kpi-card cyan">
-          <div class="kpi-label">Incident Closed Inside 4h</div>
+        <div class="kpi-card cyan" title="Incident closed within 4 hours (duration)">
+          <div class="kpi-label">≤4h</div>
           <div class="kpi-value">${incidentTotal > 0 ? Math.round(incM.within4hRate) : 0}%</div>
-          <div class="kpi-change up">${formatNumber(incM.within4h)} of ${formatNumber(incidentTotal)}</div>
+          <div class="kpi-change up">${formatNumber(incM.within4h)} / ${formatNumber(incidentTotal)}</div>
           ${showComparisons ? renderCompareRow(compare.incidents.within4hRate, true) : ''}
         </div>
-        <div class="kpi-card purple">
-          <div class="kpi-label">Incident Closed Inside 24h</div>
+        <div class="kpi-card purple" title="Incident closed within 24 hours (duration)">
+          <div class="kpi-label">≤24h</div>
           <div class="kpi-value">${incidentTotal > 0 ? Math.round(incM.within24hRate) : 0}%</div>
-          <div class="kpi-change up">${formatNumber(incM.within24h)} of ${formatNumber(incidentTotal)}</div>
+          <div class="kpi-change up">${formatNumber(incM.within24h)} / ${formatNumber(incidentTotal)}</div>
           ${showComparisons ? renderCompareRow(compare.incidents.within24hRate, true) : ''}
         </div>
-        <div class="kpi-card green">
-          <div class="kpi-label">Incident KPI After Exclusion</div>
+        <div class="kpi-card green" title="KPI after exclusion — Exceptions contains &quot;consider&quot;">
+          <div class="kpi-label">KPI After Excl.</div>
           <div class="kpi-value">${incidentTotal > 0 ? Math.round(incM.kpiExclusionRate) : 0}%</div>
-          <div class="kpi-change up">${formatNumber(incM.kpiExclusion)} of ${formatNumber(incidentTotal)}</div>
+          <div class="kpi-change up">${formatNumber(incM.kpiExclusion)} / ${formatNumber(incidentTotal)}</div>
           ${showComparisons ? renderCompareRow(compare.incidents.kpiExclusionRate, true) : ''}
         </div>
-        <div class="kpi-card green">
-          <div class="kpi-label">Incident Same-Day Closure</div>
+        <div class="kpi-card green" title="Same-day closure">
+          <div class="kpi-label">Same Day</div>
           <div class="kpi-value">${incidentSameDayRate}%</div>
-          <div class="kpi-change up">${formatNumber(incidentSameDay)} of ${formatNumber(incidentTotal)}</div>
+          <div class="kpi-change up">${formatNumber(incidentSameDay)} / ${formatNumber(incidentTotal)}</div>
           ${showComparisons ? renderCompareRow(compare.incidents.sameDayRate, true) : ''}
         </div>
-        <div class="kpi-card amber">
-          <div class="kpi-label">Incident Average Duration</div>
+        <div class="kpi-card amber" title="Average incident duration">
+          <div class="kpi-label">Avg Duration</div>
           <div class="kpi-value">${formatDuration(incidentAvgDuration)}</div>
           <div class="kpi-change">per incident</div>
           ${showComparisons ? renderCompareRow(compare.incidents.avgDuration, true) : ''}

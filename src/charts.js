@@ -25,10 +25,18 @@ const TASK_KPI_MATRIX_EXCLUDED_KEYS = new Set([
 
 const incidentCategoryShowAll = {};
 
-const branchTasksVolumeState = {
-  showAllBranches: false,
-  consideredOnly: false
-};
+/** Per chart container so Dashboard and Branch KPI toggles stay independent. */
+const branchTasksVolumeStateById = {};
+
+function getBranchVolumeState(containerId) {
+  if (!branchTasksVolumeStateById[containerId]) {
+    branchTasksVolumeStateById[containerId] = {
+      showAllBranches: false,
+      consideredOnly: false
+    };
+  }
+  return branchTasksVolumeStateById[containerId];
+}
 
 function isRowConsideredForKpi(r) {
   return (r['Exceptions'] || '').toString().toLowerCase().includes('consider');
@@ -1018,98 +1026,6 @@ export function renderSLAGauge(containerId) {
   });
 }
 
-export function renderBranchHeatmap(containerId) {
-  const { chart, titleEl } = getOrCreate(containerId) || {};
-  if (!chart) return;
-  setTitle(titleEl, 'Branch Task Volume & Avg Duration', 'blue');
-
-  const data = getFilteredRawData();
-  const branchMap = {};
-  data.forEach(r => {
-    const b = r['Branch'] || 'N/A';
-    if (!branchMap[b]) branchMap[b] = { count: 0, totalDuration: 0 };
-    branchMap[b].count++;
-    const dur = parseFloat(r['Duration']);
-    if (!isNaN(dur)) branchMap[b].totalDuration += dur;
-  });
-
-  const sorted = Object.entries(branchMap)
-    .map(([name, v]) => ({ name, count: v.count, avgDur: v.count > 0 ? (v.totalDuration / v.count) : 0 }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 25);
-
-  const branches = sorted.map(s => s.name);
-  const counts = sorted.map(s => s.count);
-  const durations = sorted.map(s => Math.round(s.avgDur * 24 * 10) / 10);
-
-  chart.setOption({
-    tooltip: {
-      trigger: 'axis',
-      backgroundColor: 'rgba(17,24,39,0.95)',
-      borderColor: 'rgba(255,255,255,0.08)',
-      textStyle: { color: '#f1f5f9', fontSize: 12 },
-      axisPointer: { type: 'shadow' }
-    },
-    legend: {
-      data: ['Task Count', 'Avg Duration (hrs)'],
-      textStyle: { color: '#94a3b8', fontSize: 11 },
-      top: 0
-    },
-    grid: { left: 100, right: 60, top: 35, bottom: 20 },
-    xAxis: [
-      {
-        type: 'value',
-        position: 'bottom',
-        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-        axisLabel: { color: '#64748b', fontSize: 10 }
-      },
-      {
-        type: 'value',
-        position: 'top',
-        splitLine: { show: false },
-        axisLabel: { color: '#64748b', fontSize: 10, formatter: '{value}h' }
-      }
-    ],
-    yAxis: {
-      type: 'category',
-      data: branches.reverse(),
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 10 },
-      axisTick: { show: false }
-    },
-    series: [
-      {
-        name: 'Task Count',
-        type: 'bar',
-        data: counts.reverse(),
-        barWidth: 12,
-        itemStyle: {
-          borderRadius: [0, 4, 4, 0],
-          color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
-            { offset: 0, color: COLORS.blue },
-            { offset: 1, color: COLORS.purple }
-          ])
-        }
-      },
-      {
-        name: 'Avg Duration (hrs)',
-        type: 'bar',
-        xAxisIndex: 1,
-        data: durations.reverse(),
-        barWidth: 12,
-        itemStyle: {
-          borderRadius: [0, 4, 4, 0],
-          color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
-            { offset: 0, color: COLORS.amber },
-            { offset: 1, color: COLORS.orange }
-          ])
-        }
-      }
-    ],
-    animationDuration: 1200
-  });
-}
-
 // ==========================================
 // INCIDENT CHARTS
 // ==========================================
@@ -1806,7 +1722,8 @@ export function renderSameDayClosure(containerId) {
 export function renderBranchTasksVolume(containerId) {
   const el = document.getElementById(containerId);
   if (!el) return;
-  const { showAllBranches, consideredOnly } = branchTasksVolumeState;
+  const state = getBranchVolumeState(containerId);
+  const { showAllBranches, consideredOnly } = state;
 
   el.innerHTML = '';
   const header = document.createElement('div');
@@ -1833,13 +1750,13 @@ export function renderBranchTasksVolume(containerId) {
 
   header.querySelectorAll('[data-branches]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      branchTasksVolumeState.showAllBranches = btn.dataset.branches === 'all';
+      state.showAllBranches = btn.dataset.branches === 'all';
       renderBranchTasksVolume(containerId);
     });
   });
   header.querySelectorAll('[data-scope]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      branchTasksVolumeState.consideredOnly = btn.dataset.scope === 'considered';
+      state.consideredOnly = btn.dataset.scope === 'considered';
       renderBranchTasksVolume(containerId);
     });
   });
