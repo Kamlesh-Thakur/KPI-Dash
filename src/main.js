@@ -23,6 +23,7 @@ import {
   renderTeamTopScores, renderTeamPerformanceByBranch, renderTeamOpsHealth,
   resizeCharts
 } from './charts.js';
+import { createCalendarPicker } from './calendarPicker.js';
 
 // ==========================================
 // STATE
@@ -34,9 +35,8 @@ let dataLoaded = false;
 let currentTheme = 'dark';
 let showComparisons = false;
 
-/** Weekly custom calendar: month being viewed, popover open state */
-let weekCalendarViewMonth = null;
-let weekPickerOpen = false;
+/** Themed calendar popover (week / day / month / range) */
+let calendarPickerApi = null;
 let compareDetailsOpen = false;
 let compareDetailsHover = false;
 
@@ -182,12 +182,27 @@ function initDateFilters() {
   const anchorEl = document.getElementById('filter-date-anchor');
   const weekEl = document.getElementById('filter-date-week');
   const weekFilterWrap = document.getElementById('week-filter-wrap');
+  const dailyFilterWrap = document.getElementById('daily-filter-wrap');
+  const monthFilterWrap = document.getElementById('month-filter-wrap');
+  const rangeFilterWrap = document.getElementById('custom-range-filter-wrap');
   const monthEl = document.getElementById('filter-date-month');
   const fromEl = document.getElementById('filter-date-from');
   const toEl = document.getElementById('filter-date-to');
-  const separatorEl = document.getElementById('date-separator');
 
-  if (!modeEl || !anchorEl || !weekEl || !weekFilterWrap || !monthEl || !fromEl || !toEl || !separatorEl) return;
+  if (
+    !modeEl ||
+    !anchorEl ||
+    !weekEl ||
+    !weekFilterWrap ||
+    !dailyFilterWrap ||
+    !monthFilterWrap ||
+    !rangeFilterWrap ||
+    !monthEl ||
+    !fromEl ||
+    !toEl
+  ) {
+    return;
+  }
 
   const today = new Date();
   const todayText = [
@@ -196,36 +211,48 @@ function initDateFilters() {
     String(today.getDate()).padStart(2, '0')
   ].join('-');
   const monthStartText = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
+  const monthYm = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
 
   modeEl.value = 'monthly';
   anchorEl.value = todayText;
   weekEl.value = formatYmdLocal(getSundayOfWeek(today));
-  monthEl.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  monthEl.value = monthYm;
+  fromEl.value = todayText;
+  toEl.value = todayText;
   setFilter('dateMode', modeEl.value);
   setFilter('dateAnchor', monthStartText);
+  setFilter('dateFrom', todayText);
+  setFilter('dateTo', todayText);
+
+  calendarPickerApi = createCalendarPicker({
+    setFilter,
+    renderAll,
+    formatYmdLocal,
+    parseYmdLocal,
+    getSundayOfWeek
+  });
+  calendarPickerApi.initCalendarPickerInner(today);
 
   const syncDateInputs = () => {
     const mode = modeEl.value;
-    const showAnchor = mode === 'daily';
+    const showDaily = mode === 'daily';
     const showWeek = mode === 'weekly';
     const showMonth = mode === 'monthly';
     const showRange = mode === 'custom';
 
-    anchorEl.classList.toggle('visible', showAnchor);
+    dailyFilterWrap.classList.toggle('visible', showDaily);
     weekFilterWrap.classList.toggle('visible', showWeek);
-    monthEl.classList.toggle('visible', showMonth);
-    fromEl.classList.toggle('visible', showRange);
-    toEl.classList.toggle('visible', showRange);
-    separatorEl.classList.toggle('visible', showRange);
-    if (showWeek) {
-      updateWeekPickerTrigger();
-      if (weekPickerOpen) renderWeekCalendar();
-    }
+    monthFilterWrap.classList.toggle('visible', showMonth);
+    rangeFilterWrap.classList.toggle('visible', showRange);
+    calendarPickerApi.syncCalTriggers({
+      showWeek,
+      showDaily,
+      showMonth,
+      showRange
+    });
   };
 
   syncDateInputs();
-  updateWeekPickerTrigger();
-  initWeekPicker(today);
 
   modeEl.addEventListener('change', (e) => {
     const mode = e.target.value;
@@ -239,28 +266,11 @@ function initDateFilters() {
       setFilter('dateAnchor', weekEl.value);
     } else if (mode === 'monthly') {
       setFilter('dateAnchor', monthToDate(monthEl.value));
+    } else if (mode === 'custom') {
+      setFilter('dateFrom', fromEl.value);
+      setFilter('dateTo', toEl.value);
     }
     syncDateInputs();
-    renderAll();
-  });
-
-  anchorEl.addEventListener('change', (e) => {
-    setFilter('dateAnchor', e.target.value);
-    renderAll();
-  });
-
-  monthEl.addEventListener('change', (e) => {
-    setFilter('dateAnchor', monthToDate(e.target.value));
-    renderAll();
-  });
-
-  fromEl.addEventListener('change', (e) => {
-    setFilter('dateFrom', e.target.value);
-    renderAll();
-  });
-
-  toEl.addEventListener('change', (e) => {
-    setFilter('dateTo', e.target.value);
     renderAll();
   });
 }
@@ -285,146 +295,6 @@ function parseYmdLocal(ymd) {
   const dt = new Date(y, mo, day);
   if (dt.getFullYear() !== y || dt.getMonth() !== mo || dt.getDate() !== day) return null;
   return dt;
-}
-
-function dateInSelectedWeek(d, weekSunday) {
-  const t = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-  const s = new Date(weekSunday.getFullYear(), weekSunday.getMonth(), weekSunday.getDate()).getTime();
-  return t >= s && t <= s + 6 * 86400000;
-}
-
-function updateWeekPickerTrigger() {
-  const el = document.getElementById('filter-date-week');
-  const textEl = document.getElementById('week-picker-trigger-text');
-  if (!el || !textEl) return;
-  const sun = parseYmdLocal(el.value) || getSundayOfWeek(new Date());
-  const sat = new Date(sun.getFullYear(), sun.getMonth(), sun.getDate() + 6);
-  const opts = { month: 'short', day: 'numeric', year: 'numeric' };
-  textEl.textContent = `${sun.toLocaleDateString('en-US', opts)} – ${sat.toLocaleDateString('en-US', opts)}`;
-}
-
-function setWeekAnchor(sun) {
-  const el = document.getElementById('filter-date-week');
-  const v = formatYmdLocal(sun);
-  if (el) el.value = v;
-  setFilter('dateAnchor', v);
-  updateWeekPickerTrigger();
-}
-
-function renderWeekCalendar() {
-  const grid = document.getElementById('week-cal-grid');
-  const titleEl = document.getElementById('week-cal-title');
-  if (!grid || !titleEl) return;
-  if (!weekCalendarViewMonth) {
-    const n = new Date();
-    weekCalendarViewMonth = new Date(n.getFullYear(), n.getMonth(), 1);
-  }
-  const y = weekCalendarViewMonth.getFullYear();
-  const m = weekCalendarViewMonth.getMonth();
-  titleEl.textContent = new Date(y, m, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-
-  const gridStart = getSundayOfWeek(new Date(y, m, 1));
-  const hidden = document.getElementById('filter-date-week');
-  const anchor = parseYmdLocal(hidden?.value) || getSundayOfWeek(new Date());
-  const selSun = getSundayOfWeek(anchor);
-
-  grid.replaceChildren();
-  for (let i = 0; i < 42; i++) {
-    const d = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + i);
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'week-cal-day';
-    if (d.getMonth() !== m) btn.classList.add('week-cal-day--muted');
-    if (dateInSelectedWeek(d, selSun)) btn.classList.add('week-cal-day--in-week');
-    btn.textContent = String(d.getDate());
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      setWeekAnchor(getSundayOfWeek(d));
-      closeWeekCalendar();
-      renderAll();
-    });
-    grid.appendChild(btn);
-  }
-}
-
-function openWeekCalendar() {
-  const pop = document.getElementById('week-calendar-popover');
-  const trigger = document.getElementById('week-picker-trigger');
-  weekPickerOpen = true;
-  if (pop) pop.hidden = false;
-  if (trigger) trigger.setAttribute('aria-expanded', 'true');
-  renderWeekCalendar();
-}
-
-function closeWeekCalendar() {
-  const pop = document.getElementById('week-calendar-popover');
-  const trigger = document.getElementById('week-picker-trigger');
-  weekPickerOpen = false;
-  if (pop) pop.hidden = true;
-  if (trigger) trigger.setAttribute('aria-expanded', 'false');
-}
-
-function initWeekPicker(referenceDate) {
-  const trigger = document.getElementById('week-picker-trigger');
-  const pop = document.getElementById('week-calendar-popover');
-  const shell = document.querySelector('.week-picker-shell');
-  if (!trigger || !pop || !shell) return;
-
-  const ref = referenceDate instanceof Date ? referenceDate : new Date();
-  weekCalendarViewMonth = new Date(ref.getFullYear(), ref.getMonth(), 1);
-
-  trigger.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (weekPickerOpen) {
-      closeWeekCalendar();
-    } else {
-      const hid = document.getElementById('filter-date-week');
-      const sun = parseYmdLocal(hid?.value) || getSundayOfWeek(new Date());
-      weekCalendarViewMonth = new Date(sun.getFullYear(), sun.getMonth(), 1);
-      openWeekCalendar();
-    }
-  });
-
-  document.getElementById('week-cal-prev')?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    weekCalendarViewMonth.setMonth(weekCalendarViewMonth.getMonth() - 1);
-    renderWeekCalendar();
-  });
-  document.getElementById('week-cal-next')?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    weekCalendarViewMonth.setMonth(weekCalendarViewMonth.getMonth() + 1);
-    renderWeekCalendar();
-  });
-
-  document.getElementById('week-cal-today')?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const sun = getSundayOfWeek(new Date());
-    setWeekAnchor(sun);
-    weekCalendarViewMonth = new Date(sun.getFullYear(), sun.getMonth(), 1);
-    closeWeekCalendar();
-    renderAll();
-  });
-
-  document.getElementById('week-cal-close')?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    closeWeekCalendar();
-  });
-
-  pop.addEventListener('click', (e) => e.stopPropagation());
-
-  document.addEventListener(
-    'pointerdown',
-    (e) => {
-      if (!weekPickerOpen) return;
-      if (shell.contains(e.target)) return;
-      closeWeekCalendar();
-    },
-    true
-  );
-
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && weekPickerOpen) closeWeekCalendar();
-  });
 }
 
 function monthToDate(monthValue) {
