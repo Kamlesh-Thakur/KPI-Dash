@@ -33,6 +33,8 @@ let currentTab = 'dashboard';
 let dataLoaded = false;
 let currentTheme = 'dark';
 let showComparisons = false;
+let compareDetailsOpen = false;
+let compareDetailsHover = false;
 
 // ==========================================
 // INIT
@@ -40,6 +42,7 @@ let showComparisons = false;
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   initCompareToggle();
+  initCompareDetails();
   initSidebarCollapse();
   initNavigation();
   initFilters();
@@ -519,6 +522,60 @@ function updateCompareToggleUI() {
   compareToggle.setAttribute('title', showComparisons ? 'Hide comparisons' : 'Show comparisons');
 }
 
+function syncCompareDropdown() {
+  const panel = document.getElementById('compare-context');
+  const btn = document.getElementById('compare-details-btn');
+  const anchor = document.getElementById('compare-details-anchor');
+  if (!panel || !btn || !anchor) return;
+  const showPanel = showComparisons && (compareDetailsOpen || compareDetailsHover);
+  panel.hidden = !showPanel;
+  btn.setAttribute('aria-expanded', showPanel ? 'true' : 'false');
+  btn.classList.toggle('active', showPanel);
+}
+
+function initCompareDetails() {
+  const anchor = document.getElementById('compare-details-anchor');
+  const btn = document.getElementById('compare-details-btn');
+  if (!anchor || !btn) return;
+  let leaveTimer = null;
+  anchor.addEventListener('mouseenter', () => {
+    clearTimeout(leaveTimer);
+    compareDetailsHover = true;
+    syncCompareDropdown();
+  });
+  anchor.addEventListener('mouseleave', () => {
+    leaveTimer = setTimeout(() => {
+      compareDetailsHover = false;
+      syncCompareDropdown();
+    }, 220);
+  });
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    compareDetailsOpen = !compareDetailsOpen;
+    syncCompareDropdown();
+  });
+  document.addEventListener('click', (e) => {
+    if (!showComparisons || !compareDetailsOpen) return;
+    if (!anchor.contains(e.target)) {
+      compareDetailsOpen = false;
+      syncCompareDropdown();
+    }
+  });
+}
+
+function getCompareContextSummaryShort() {
+  const win = getComparisonWindowDates();
+  if (!win) return 'Comparison: pick a date filter to compare current, prior, and last year.';
+  const cur = formatRangeShort(win.thisStart, win.thisEnd);
+  return `Current: ${cur}. Click or hover for full comparison windows.`;
+}
+
+/** Percentage (0–100) with two decimals for KPI rate cards. */
+function formatKpiPercent(value) {
+  if (value == null || Number.isNaN(value)) return '0.00%';
+  return `${Number(value).toFixed(2)}%`;
+}
+
 function updateGridThemes() {
   const nextGridTheme = currentTheme === 'light' ? 'ag-theme-quartz' : 'ag-theme-quartz-dark';
   const altGridTheme = currentTheme === 'light' ? 'ag-theme-quartz-dark' : 'ag-theme-quartz';
@@ -656,20 +713,33 @@ function renderKPICards() {
   const taskM = toRowMetrics(data);
   const total = taskM.total;
   const sameDay = taskM.sameDay;
-  const sameDayRate = total > 0 ? Math.round(taskM.sameDayRate) : 0;
   const avgDuration = taskM.avgDuration;
   const taskTypes = new Set(data.map(r => r['Task Type'])).size;
   const incM = toRowMetrics(incidentData);
   const incidentTotal = incM.total;
   const incidentSameDay = incM.sameDay;
-  const incidentSameDayRate = incidentTotal > 0 ? Math.round(incM.sameDayRate) : 0;
   const incidentAvgDuration = incM.avgDuration;
   const compare = showComparisons ? buildComparisons() : emptyCompare();
-  const compareContextEl = document.getElementById('compare-context');
-  if (compareContextEl) {
-    compareContextEl.style.display = showComparisons ? 'block' : 'none';
-    compareContextEl.textContent = showComparisons ? buildComparisonContextLabel() : '';
+  const compareChipLabels = showComparisons ? getCompareChipLabels() : null;
+  if (!showComparisons) {
+    compareDetailsOpen = false;
+    compareDetailsHover = false;
   }
+  const compareContextEl = document.getElementById('compare-context');
+  const compareDetailsAnchor = document.getElementById('compare-details-anchor');
+  const compareDetailsBtn = document.getElementById('compare-details-btn');
+  if (compareContextEl) {
+    compareContextEl.innerHTML = showComparisons ? buildComparisonContextLabel() : '';
+  }
+  if (compareDetailsAnchor) {
+    compareDetailsAnchor.hidden = !showComparisons;
+  }
+  if (compareDetailsBtn) {
+    compareDetailsBtn.title = showComparisons
+      ? getCompareContextSummaryShort()
+      : 'Available when Compare is on';
+  }
+  syncCompareDropdown();
 
   container.innerHTML = `
     <div class="kpi-section kpi-section--tasks" role="group" aria-label="Tasks KPIs">
@@ -679,37 +749,37 @@ function renderKPICards() {
           <div class="kpi-label">Total Tasks</div>
           <div class="kpi-value">${formatNumber(total)}</div>
           <div class="kpi-change">${taskTypes} types</div>
-          ${showComparisons ? renderCompareRow(compare.tasks.total, false) : ''}
+          ${showComparisons ? renderCompareRow(compare.tasks.total, false, compareChipLabels) : ''}
         </div>
         <div class="kpi-card cyan" title="Task closed within 4 hours (duration)">
           <div class="kpi-label">Within 4h</div>
-          <div class="kpi-value">${total > 0 ? Math.round(taskM.within4hRate) : 0}%</div>
+          <div class="kpi-value">${total > 0 ? formatKpiPercent(taskM.within4hRate) : '0.00%'}</div>
           <div class="kpi-change up">${formatNumber(taskM.within4h)} / ${formatNumber(total)}</div>
-          ${showComparisons ? renderCompareRow(compare.tasks.within4hRate, true) : ''}
+          ${showComparisons ? renderCompareRow(compare.tasks.within4hRate, true, compareChipLabels) : ''}
         </div>
         <div class="kpi-card purple" title="Task closed within 24 hours (duration)">
           <div class="kpi-label">Within 24h</div>
-          <div class="kpi-value">${total > 0 ? Math.round(taskM.within24hRate) : 0}%</div>
+          <div class="kpi-value">${total > 0 ? formatKpiPercent(taskM.within24hRate) : '0.00%'}</div>
           <div class="kpi-change up">${formatNumber(taskM.within24h)} / ${formatNumber(total)}</div>
-          ${showComparisons ? renderCompareRow(compare.tasks.within24hRate, true) : ''}
+          ${showComparisons ? renderCompareRow(compare.tasks.within24hRate, true, compareChipLabels) : ''}
         </div>
         <div class="kpi-card indigo" title="KPI after exclusion — Exceptions contains &quot;consider&quot;">
           <div class="kpi-label">KPI After Excl.</div>
-          <div class="kpi-value">${total > 0 ? Math.round(taskM.kpiExclusionRate) : 0}%</div>
+          <div class="kpi-value">${total > 0 ? formatKpiPercent(taskM.kpiExclusionRate) : '0.00%'}</div>
           <div class="kpi-change up">${formatNumber(taskM.kpiExclusion)} / ${formatNumber(total)}</div>
-          ${showComparisons ? renderCompareRow(compare.tasks.kpiExclusionRate, true) : ''}
+          ${showComparisons ? renderCompareRow(compare.tasks.kpiExclusionRate, true, compareChipLabels) : ''}
         </div>
         <div class="kpi-card emerald" title="Same-day closure">
           <div class="kpi-label">Same Day</div>
-          <div class="kpi-value">${sameDayRate}%</div>
+          <div class="kpi-value">${total > 0 ? formatKpiPercent(taskM.sameDayRate) : '0.00%'}</div>
           <div class="kpi-change up">${formatNumber(sameDay)} / ${formatNumber(total)}</div>
-          ${showComparisons ? renderCompareRow(compare.tasks.sameDayRate, true) : ''}
+          ${showComparisons ? renderCompareRow(compare.tasks.sameDayRate, true, compareChipLabels) : ''}
         </div>
         <div class="kpi-card amber" title="Average task duration">
           <div class="kpi-label">Avg Duration</div>
           <div class="kpi-value">${formatDuration(avgDuration)}</div>
           <div class="kpi-change">per task</div>
-          ${showComparisons ? renderCompareRow(compare.tasks.avgDuration, true) : ''}
+          ${showComparisons ? renderCompareRow(compare.tasks.avgDuration, true, compareChipLabels) : ''}
         </div>
       </div>
     </div>
@@ -720,51 +790,49 @@ function renderKPICards() {
           <div class="kpi-label">Total</div>
           <div class="kpi-value">${formatNumber(incidentTotal)}</div>
           <div class="kpi-change">fiber network</div>
-          ${showComparisons ? renderCompareRow(compare.incidents.total, false) : ''}
+          ${showComparisons ? renderCompareRow(compare.incidents.total, false, compareChipLabels) : ''}
         </div>
         <div class="kpi-card cyan" title="Incident closed within 4 hours (duration)">
           <div class="kpi-label">Within 4h</div>
-          <div class="kpi-value">${incidentTotal > 0 ? Math.round(incM.within4hRate) : 0}%</div>
+          <div class="kpi-value">${incidentTotal > 0 ? formatKpiPercent(incM.within4hRate) : '0.00%'}</div>
           <div class="kpi-change up">${formatNumber(incM.within4h)} / ${formatNumber(incidentTotal)}</div>
-          ${showComparisons ? renderCompareRow(compare.incidents.within4hRate, true) : ''}
+          ${showComparisons ? renderCompareRow(compare.incidents.within4hRate, true, compareChipLabels) : ''}
         </div>
         <div class="kpi-card purple" title="Incident closed within 24 hours (duration)">
           <div class="kpi-label">Within 24h</div>
-          <div class="kpi-value">${incidentTotal > 0 ? Math.round(incM.within24hRate) : 0}%</div>
+          <div class="kpi-value">${incidentTotal > 0 ? formatKpiPercent(incM.within24hRate) : '0.00%'}</div>
           <div class="kpi-change up">${formatNumber(incM.within24h)} / ${formatNumber(incidentTotal)}</div>
-          ${showComparisons ? renderCompareRow(compare.incidents.within24hRate, true) : ''}
+          ${showComparisons ? renderCompareRow(compare.incidents.within24hRate, true, compareChipLabels) : ''}
         </div>
         <div class="kpi-card indigo" title="KPI after exclusion — Exceptions contains &quot;consider&quot;">
           <div class="kpi-label">KPI After Excl.</div>
-          <div class="kpi-value">${incidentTotal > 0 ? Math.round(incM.kpiExclusionRate) : 0}%</div>
+          <div class="kpi-value">${incidentTotal > 0 ? formatKpiPercent(incM.kpiExclusionRate) : '0.00%'}</div>
           <div class="kpi-change up">${formatNumber(incM.kpiExclusion)} / ${formatNumber(incidentTotal)}</div>
-          ${showComparisons ? renderCompareRow(compare.incidents.kpiExclusionRate, true) : ''}
+          ${showComparisons ? renderCompareRow(compare.incidents.kpiExclusionRate, true, compareChipLabels) : ''}
         </div>
         <div class="kpi-card emerald" title="Same-day closure">
           <div class="kpi-label">Same Day</div>
-          <div class="kpi-value">${incidentSameDayRate}%</div>
+          <div class="kpi-value">${incidentTotal > 0 ? formatKpiPercent(incM.sameDayRate) : '0.00%'}</div>
           <div class="kpi-change up">${formatNumber(incidentSameDay)} / ${formatNumber(incidentTotal)}</div>
-          ${showComparisons ? renderCompareRow(compare.incidents.sameDayRate, true) : ''}
+          ${showComparisons ? renderCompareRow(compare.incidents.sameDayRate, true, compareChipLabels) : ''}
         </div>
         <div class="kpi-card amber" title="Average incident duration">
           <div class="kpi-label">Avg Duration</div>
           <div class="kpi-value">${formatDuration(incidentAvgDuration)}</div>
           <div class="kpi-change">per incident</div>
-          ${showComparisons ? renderCompareRow(compare.incidents.avgDuration, true) : ''}
+          ${showComparisons ? renderCompareRow(compare.incidents.avgDuration, true, compareChipLabels) : ''}
         </div>
       </div>
     </div>
   `;
 }
 
-function buildComparisons() {
+/** Comparison windows aligned with buildComparisons / buildComparisonContextLabel */
+function getComparisonWindowDates() {
   const range = getDateFilterRange();
   const thisStart = range.start;
   const thisEnd = range.end;
-  if (!thisStart || !thisEnd) {
-    return emptyCompare();
-  }
-
+  if (!thisStart || !thisEnd) return null;
   const daySpan = Math.max(1, Math.round((thisEnd - thisStart) / 86400000) + 1);
   const prevEnd = new Date(thisStart);
   prevEnd.setDate(prevEnd.getDate() - 1);
@@ -774,6 +842,82 @@ function buildComparisons() {
   yoyStart.setFullYear(yoyStart.getFullYear() - 1);
   const yoyEnd = new Date(thisEnd);
   yoyEnd.setFullYear(yoyEnd.getFullYear() - 1);
+  return { thisStart, thisEnd, prevStart, prevEnd, yoyStart, yoyEnd, daySpan };
+}
+
+function getCompareChipLabels() {
+  const mode = getState().filters?.dateMode || 'overall';
+  const byMode = {
+    daily: {
+      prevCode: 'DoD',
+      yoyCode: 'YoY',
+      prevTitle: 'Change vs the previous calendar day',
+      yoyTitle: 'Change vs the same calendar day last year',
+      prevPeriod: 'Prior day',
+      yoyPeriod: 'Same day last year'
+    },
+    weekly: {
+      prevCode: 'WoW',
+      yoyCode: 'YoY',
+      prevTitle: 'Change vs the previous week (same length)',
+      yoyTitle: 'Change vs the same dates last year',
+      prevPeriod: 'Prior week',
+      yoyPeriod: 'Same span last year'
+    },
+    monthly: {
+      prevCode: 'MoM',
+      yoyCode: 'YoY',
+      prevTitle: 'Change vs the previous calendar month',
+      yoyTitle: 'Change vs the same calendar month last year',
+      prevPeriod: 'Prior month',
+      yoyPeriod: 'Same month last year'
+    },
+    custom: {
+      prevCode: 'Prior',
+      yoyCode: 'YoY',
+      prevTitle: 'Change vs the previous period of equal length',
+      yoyTitle: 'Change vs the same calendar span last year',
+      prevPeriod: 'Prior period',
+      yoyPeriod: 'Same span last year'
+    },
+    overall: {
+      prevCode: 'Prior',
+      yoyCode: 'YoY',
+      prevTitle: 'Change vs the previous period of equal length (immediately before your data range)',
+      yoyTitle: 'Change vs the same calendar span last year',
+      prevPeriod: 'Prior period',
+      yoyPeriod: 'Same span last year'
+    }
+  };
+  return byMode[mode] || byMode.overall;
+}
+
+function getCompareModeHeadline() {
+  const mode = getState().filters?.dateMode || 'overall';
+  const map = {
+    daily: 'Comparing to the prior day and the same day last year',
+    weekly: 'Comparing to the prior week and the same dates last year',
+    monthly: 'Comparing to the prior month and the same month last year',
+    custom: 'Comparing to the prior period (same length) and the same span last year',
+    overall: 'Comparing to the prior period (same length) and the same span last year'
+  };
+  return map[mode] || map.overall;
+}
+
+function escapeAttr(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function buildComparisons() {
+  const win = getComparisonWindowDates();
+  if (!win) {
+    return emptyCompare();
+  }
+  const { thisStart, thisEnd, prevStart, prevEnd, yoyStart, yoyEnd } = win;
 
   const currTasks = getFilteredRawDataForRange(thisStart, thisEnd);
   const prevTasks = getFilteredRawDataForRange(prevStart, prevEnd);
@@ -814,10 +958,11 @@ function calcDelta(current, base) {
   return ((current - base) / Math.abs(base)) * 100;
 }
 
-function renderCompareRow(pair, isPercent) {
+function renderCompareRow(pair, isPercent, chipLabels) {
+  const L = chipLabels || getCompareChipLabels();
   return `<div class="kpi-compare">
-    <span class="compare-chip ${pair.mom >= 0 ? 'up' : 'down'}">MoM ${formatDelta(pair.mom, isPercent)}</span>
-    <span class="compare-chip ${pair.yoy >= 0 ? 'up' : 'down'}">YoY ${formatDelta(pair.yoy, isPercent)}</span>
+    <span class="compare-chip ${pair.mom >= 0 ? 'up' : 'down'}" title="${escapeAttr(L.prevTitle)}">${L.prevCode} ${formatDelta(pair.mom, isPercent)}</span>
+    <span class="compare-chip ${pair.yoy >= 0 ? 'up' : 'down'}" title="${escapeAttr(L.yoyTitle)}">${L.yoyCode} ${formatDelta(pair.yoy, isPercent)}</span>
   </div>`;
 }
 
@@ -849,28 +994,28 @@ function emptyCompare() {
 }
 
 function buildComparisonContextLabel() {
-  const { start, end } = getDateFilterRange();
-  const mode = getState().filters?.dateMode || 'overall';
-  if (!start || !end) return 'Comparison context: current period vs previous period and same period last year.';
-
-  const spanDays = Math.max(1, Math.round((end - start) / 86400000) + 1);
-  const prevEnd = new Date(start);
-  prevEnd.setDate(prevEnd.getDate() - 1);
-  const prevStart = new Date(prevEnd);
-  prevStart.setDate(prevEnd.getDate() - (spanDays - 1));
-  const yoyStart = new Date(start);
-  yoyStart.setFullYear(yoyStart.getFullYear() - 1);
-  const yoyEnd = new Date(end);
-  yoyEnd.setFullYear(yoyEnd.getFullYear() - 1);
-
-  if (mode === 'monthly') {
-    const currentMonth = start.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-    const prevMonth = prevStart.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-    const yoyMonth = yoyStart.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-    return `Current: ${currentMonth} | Last period: ${prevMonth} | Last year: ${yoyMonth}`;
+  const win = getComparisonWindowDates();
+  const L = getCompareChipLabels();
+  if (!win) {
+    return '<p class="compare-context-muted">Choose a date filter so comparisons can use a current window, a prior window, and last year.</p>';
   }
+  const { thisStart, thisEnd, prevStart, prevEnd, yoyStart, yoyEnd } = win;
+  const cur = formatRangeShort(thisStart, thisEnd);
+  const prev = formatRangeShort(prevStart, prevEnd);
+  const yoy = formatRangeShort(yoyStart, yoyEnd);
+  const headline = getCompareModeHeadline();
 
-  return `Current: ${formatRangeShort(start, end)} | Last period: ${formatRangeShort(prevStart, prevEnd)} | Last year: ${formatRangeShort(yoyStart, yoyEnd)}`;
+  return `
+    <div class="compare-context-inner">
+      <p class="compare-context-headline">${headline}</p>
+      <dl class="compare-context-dl">
+        <div class="compare-context-row"><dt>Current</dt><dd>${cur}</dd></div>
+        <div class="compare-context-row"><dt>${L.prevPeriod} <span class="compare-context-code">(${L.prevCode})</span></dt><dd>${prev}</dd></div>
+        <div class="compare-context-row"><dt>${L.yoyPeriod} <span class="compare-context-code">(${L.yoyCode})</span></dt><dd>${yoy}</dd></div>
+      </dl>
+      <p class="compare-context-hint">Percent changes on each card match the two chips (${L.prevCode} and ${L.yoyCode}). Hover a chip for a full explanation.</p>
+    </div>
+  `;
 }
 
 function formatRangeShort(start, end) {
