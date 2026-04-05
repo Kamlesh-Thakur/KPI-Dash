@@ -16,7 +16,6 @@ import {
   renderTasksTrend, renderTaskTypePie,
   renderPriorityDist, renderBranchHeatmap, renderTaskTypeResolutionTargets,
   renderRepeatedSupportWindow, renderImmediateSupportWindow, renderRepeatedSupportByBranch, renderImmediateSupportByBranch,
-  renderTaskKPIBars,
   renderIncidentTrend, renderIncidentCategory,
   renderIncidentComplexity, renderIncidentClosure,
   renderBranchPerformance, renderBranchClosureRates, renderBranchEfficiencyFromSheet, renderBranchWorkloadFromSheet,
@@ -549,7 +548,6 @@ function renderTabContent(tab) {
       renderIncidentComplexity('chart-incident-complexity-dashboard');
       renderPriorityDist('chart-priority-dist');
       renderBranchHeatmap('chart-branch-heatmap');
-      renderTaskKPIBars('chart-task-kpi-bars');
       renderTaskTypeResolutionTargets('chart-type-resolution-targets');
       break;
     case 'tasks':
@@ -597,22 +595,75 @@ function getCookie(name) {
 // ==========================================
 // KPI CARDS
 // ==========================================
+function rowDurationHours(r) {
+  const d = parseFloat(r['Duration']);
+  return Number.isNaN(d) ? null : d * 24;
+}
+
+function isKpiExclusionConsidered(r) {
+  return (r['Exceptions'] || '').toString().toLowerCase().includes('consider');
+}
+
+/** Same duration / exception rules as Task KPI matrix (buildTaskKPIRows). */
+function toRowMetrics(rows) {
+  const total = rows.length;
+  if (!total) {
+    return {
+      total: 0,
+      sameDayRate: 0,
+      avgDuration: 0,
+      within4hRate: 0,
+      within24hRate: 0,
+      kpiExclusionRate: 0,
+      sameDay: 0,
+      within4h: 0,
+      within24h: 0,
+      kpiExclusion: 0
+    };
+  }
+  const sameDay = rows.filter(r => r['Same day Closure'] === true).length;
+  const avgDuration = rows.reduce((s, r) => s + (parseFloat(r['Duration']) || 0), 0) / total;
+  let within4h = 0;
+  let within24h = 0;
+  let kpiExclusion = 0;
+  for (const r of rows) {
+    const h = rowDurationHours(r);
+    if (h != null) {
+      if (h <= 4) within4h += 1;
+      if (h <= 24) within24h += 1;
+    }
+    if (isKpiExclusionConsidered(r)) kpiExclusion += 1;
+  }
+  return {
+    total,
+    sameDayRate: (sameDay / total) * 100,
+    avgDuration,
+    within4hRate: (within4h / total) * 100,
+    within24hRate: (within24h / total) * 100,
+    kpiExclusionRate: (kpiExclusion / total) * 100,
+    sameDay,
+    within4h,
+    within24h,
+    kpiExclusion
+  };
+}
+
 function renderKPICards() {
   const data = getFilteredRawData();
   const incidentData = getFilteredIncidentData();
   const container = document.getElementById('kpi-cards');
 
-  const total = data.length;
-  const sameDay = data.filter(r => r['Same day Closure'] === true).length;
-  const sameDayRate = total > 0 ? Math.round((sameDay / total) * 100) : 0;
-  const avgDuration = total > 0 ? (data.reduce((sum, r) => sum + (parseFloat(r['Duration']) || 0), 0) / total) : 0;
+  const taskM = toRowMetrics(data);
+  const total = taskM.total;
+  const sameDay = taskM.sameDay;
+  const sameDayRate = total > 0 ? Math.round(taskM.sameDayRate) : 0;
+  const avgDuration = taskM.avgDuration;
   const taskTypes = new Set(data.map(r => r['Task Type'])).size;
-  const incidentTotal = incidentData.length;
-  const incidentSameDay = incidentData.filter(r => r['Same day Closure'] === true).length;
-  const incidentSameDayRate = incidentTotal > 0 ? Math.round((incidentSameDay / incidentTotal) * 100) : 0;
-  const incidentAvgDuration = incidentTotal > 0
-    ? (incidentData.reduce((sum, r) => sum + (parseFloat(r['Duration']) || 0), 0) / incidentTotal)
-    : 0;
+  const incM = toRowMetrics(incidentData);
+  const incidentTotal = incM.total;
+  const incidentSameDay = incM.sameDay;
+  const incidentSameDayRate = incidentTotal > 0 ? Math.round(incM.sameDayRate) : 0;
+  const incidentAvgDuration = incM.avgDuration;
   const compare = showComparisons ? buildComparisons() : emptyCompare();
   const compareContextEl = document.getElementById('compare-context');
   if (compareContextEl) {
@@ -621,41 +672,87 @@ function renderKPICards() {
   }
 
   container.innerHTML = `
-    <div class="kpi-card blue">
-      <div class="kpi-label">Total Tasks</div>
-      <div class="kpi-value">${formatNumber(total)}</div>
-      <div class="kpi-change">${taskTypes} task types</div>
-      ${showComparisons ? renderCompareRow(compare.tasks.total, false) : ''}
+    <div class="kpi-section kpi-section--tasks">
+      <div class="kpi-section-label">Tasks</div>
+      <div class="kpi-section-inner">
+        <div class="kpi-card blue">
+          <div class="kpi-label">Total Tasks</div>
+          <div class="kpi-value">${formatNumber(total)}</div>
+          <div class="kpi-change">${taskTypes} task types</div>
+          ${showComparisons ? renderCompareRow(compare.tasks.total, false) : ''}
+        </div>
+        <div class="kpi-card cyan">
+          <div class="kpi-label">Task Closed Inside 4h</div>
+          <div class="kpi-value">${total > 0 ? Math.round(taskM.within4hRate) : 0}%</div>
+          <div class="kpi-change up">${formatNumber(taskM.within4h)} of ${formatNumber(total)}</div>
+          ${showComparisons ? renderCompareRow(compare.tasks.within4hRate, true) : ''}
+        </div>
+        <div class="kpi-card purple">
+          <div class="kpi-label">Task Closed Inside 24h</div>
+          <div class="kpi-value">${total > 0 ? Math.round(taskM.within24hRate) : 0}%</div>
+          <div class="kpi-change up">${formatNumber(taskM.within24h)} of ${formatNumber(total)}</div>
+          ${showComparisons ? renderCompareRow(compare.tasks.within24hRate, true) : ''}
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Task KPI After Exclusion</div>
+          <div class="kpi-value">${total > 0 ? Math.round(taskM.kpiExclusionRate) : 0}%</div>
+          <div class="kpi-change up">${formatNumber(taskM.kpiExclusion)} of ${formatNumber(total)}</div>
+          ${showComparisons ? renderCompareRow(compare.tasks.kpiExclusionRate, true) : ''}
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Same-Day Closure</div>
+          <div class="kpi-value">${sameDayRate}%</div>
+          <div class="kpi-change up">${formatNumber(sameDay)} of ${formatNumber(total)}</div>
+          ${showComparisons ? renderCompareRow(compare.tasks.sameDayRate, true) : ''}
+        </div>
+        <div class="kpi-card amber">
+          <div class="kpi-label">Average Duration</div>
+          <div class="kpi-value">${formatDuration(avgDuration)}</div>
+          <div class="kpi-change">per task</div>
+          ${showComparisons ? renderCompareRow(compare.tasks.avgDuration, true) : ''}
+        </div>
+      </div>
     </div>
-    <div class="kpi-card green">
-      <div class="kpi-label">Same-Day Closure</div>
-      <div class="kpi-value">${sameDayRate}%</div>
-      <div class="kpi-change up">${formatNumber(sameDay)} of ${formatNumber(total)}</div>
-      ${showComparisons ? renderCompareRow(compare.tasks.sameDayRate, true) : ''}
-    </div>
-    <div class="kpi-card amber">
-      <div class="kpi-label">Avg Duration</div>
-      <div class="kpi-value">${formatDuration(avgDuration)}</div>
-      <div class="kpi-change">per task</div>
-      ${showComparisons ? renderCompareRow(compare.tasks.avgDuration, true) : ''}
-    </div>
-    <div class="kpi-card purple">
-      <div class="kpi-label">Incidents</div>
-      <div class="kpi-value">${formatNumber(getFilteredIncidentData().length)}</div>
-      <div class="kpi-change">fiber network</div>
-      ${showComparisons ? renderCompareRow(compare.incidents.total, false) : ''}
-    </div>
-    <div class="kpi-card green">
-      <div class="kpi-label">Incident Same-Day Closure</div>
-      <div class="kpi-value">${incidentSameDayRate}%</div>
-      <div class="kpi-change up">${formatNumber(incidentSameDay)} of ${formatNumber(incidentTotal)}</div>
-      ${showComparisons ? renderCompareRow(compare.incidents.sameDayRate, true) : ''}
-    </div>
-    <div class="kpi-card amber">
-      <div class="kpi-label">Incident Avg Duration</div>
-      <div class="kpi-value">${formatDuration(incidentAvgDuration)}</div>
-      <div class="kpi-change">per incident</div>
-      ${showComparisons ? renderCompareRow(compare.incidents.avgDuration, true) : ''}
+    <div class="kpi-section kpi-section--incidents">
+      <div class="kpi-section-label">Incidents</div>
+      <div class="kpi-section-inner">
+        <div class="kpi-card red">
+          <div class="kpi-label">Total Incidents</div>
+          <div class="kpi-value">${formatNumber(incidentTotal)}</div>
+          <div class="kpi-change">fiber network</div>
+          ${showComparisons ? renderCompareRow(compare.incidents.total, false) : ''}
+        </div>
+        <div class="kpi-card cyan">
+          <div class="kpi-label">Incident Closed Inside 4h</div>
+          <div class="kpi-value">${incidentTotal > 0 ? Math.round(incM.within4hRate) : 0}%</div>
+          <div class="kpi-change up">${formatNumber(incM.within4h)} of ${formatNumber(incidentTotal)}</div>
+          ${showComparisons ? renderCompareRow(compare.incidents.within4hRate, true) : ''}
+        </div>
+        <div class="kpi-card purple">
+          <div class="kpi-label">Incident Closed Inside 24h</div>
+          <div class="kpi-value">${incidentTotal > 0 ? Math.round(incM.within24hRate) : 0}%</div>
+          <div class="kpi-change up">${formatNumber(incM.within24h)} of ${formatNumber(incidentTotal)}</div>
+          ${showComparisons ? renderCompareRow(compare.incidents.within24hRate, true) : ''}
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Incident KPI After Exclusion</div>
+          <div class="kpi-value">${incidentTotal > 0 ? Math.round(incM.kpiExclusionRate) : 0}%</div>
+          <div class="kpi-change up">${formatNumber(incM.kpiExclusion)} of ${formatNumber(incidentTotal)}</div>
+          ${showComparisons ? renderCompareRow(compare.incidents.kpiExclusionRate, true) : ''}
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Incident Same-Day Closure</div>
+          <div class="kpi-value">${incidentSameDayRate}%</div>
+          <div class="kpi-change up">${formatNumber(incidentSameDay)} of ${formatNumber(incidentTotal)}</div>
+          ${showComparisons ? renderCompareRow(compare.incidents.sameDayRate, true) : ''}
+        </div>
+        <div class="kpi-card amber">
+          <div class="kpi-label">Incident Average Duration</div>
+          <div class="kpi-value">${formatDuration(incidentAvgDuration)}</div>
+          <div class="kpi-change">per incident</div>
+          ${showComparisons ? renderCompareRow(compare.incidents.avgDuration, true) : ''}
+        </div>
+      </div>
     </div>
   `;
 }
@@ -685,24 +782,22 @@ function buildComparisons() {
   const prevInc = getFilteredIncidentDataForRange(prevStart, prevEnd);
   const yoyInc = getFilteredIncidentDataForRange(yoyStart, yoyEnd);
 
-  const toMetrics = (rows) => {
-    const total = rows.length;
-    const sameDay = rows.filter(r => r['Same day Closure'] === true).length;
-    const sameDayRate = total ? (sameDay / total) * 100 : 0;
-    const avgDuration = total ? rows.reduce((s, r) => s + (parseFloat(r['Duration']) || 0), 0) / total : 0;
-    return { total, sameDayRate, avgDuration };
-  };
-
   return {
     tasks: {
-      total: deltaPair(toMetrics(currTasks).total, toMetrics(prevTasks).total, toMetrics(yoyTasks).total),
-      sameDayRate: deltaPair(toMetrics(currTasks).sameDayRate, toMetrics(prevTasks).sameDayRate, toMetrics(yoyTasks).sameDayRate),
-      avgDuration: deltaPair(toMetrics(currTasks).avgDuration, toMetrics(prevTasks).avgDuration, toMetrics(yoyTasks).avgDuration)
+      total: deltaPair(toRowMetrics(currTasks).total, toRowMetrics(prevTasks).total, toRowMetrics(yoyTasks).total),
+      sameDayRate: deltaPair(toRowMetrics(currTasks).sameDayRate, toRowMetrics(prevTasks).sameDayRate, toRowMetrics(yoyTasks).sameDayRate),
+      avgDuration: deltaPair(toRowMetrics(currTasks).avgDuration, toRowMetrics(prevTasks).avgDuration, toRowMetrics(yoyTasks).avgDuration),
+      within4hRate: deltaPair(toRowMetrics(currTasks).within4hRate, toRowMetrics(prevTasks).within4hRate, toRowMetrics(yoyTasks).within4hRate),
+      within24hRate: deltaPair(toRowMetrics(currTasks).within24hRate, toRowMetrics(prevTasks).within24hRate, toRowMetrics(yoyTasks).within24hRate),
+      kpiExclusionRate: deltaPair(toRowMetrics(currTasks).kpiExclusionRate, toRowMetrics(prevTasks).kpiExclusionRate, toRowMetrics(yoyTasks).kpiExclusionRate)
     },
     incidents: {
-      total: deltaPair(toMetrics(currInc).total, toMetrics(prevInc).total, toMetrics(yoyInc).total),
-      sameDayRate: deltaPair(toMetrics(currInc).sameDayRate, toMetrics(prevInc).sameDayRate, toMetrics(yoyInc).sameDayRate),
-      avgDuration: deltaPair(toMetrics(currInc).avgDuration, toMetrics(prevInc).avgDuration, toMetrics(yoyInc).avgDuration)
+      total: deltaPair(toRowMetrics(currInc).total, toRowMetrics(prevInc).total, toRowMetrics(yoyInc).total),
+      sameDayRate: deltaPair(toRowMetrics(currInc).sameDayRate, toRowMetrics(prevInc).sameDayRate, toRowMetrics(yoyInc).sameDayRate),
+      avgDuration: deltaPair(toRowMetrics(currInc).avgDuration, toRowMetrics(prevInc).avgDuration, toRowMetrics(yoyInc).avgDuration),
+      within4hRate: deltaPair(toRowMetrics(currInc).within4hRate, toRowMetrics(prevInc).within4hRate, toRowMetrics(yoyInc).within4hRate),
+      within24hRate: deltaPair(toRowMetrics(currInc).within24hRate, toRowMetrics(prevInc).within24hRate, toRowMetrics(yoyInc).within24hRate),
+      kpiExclusionRate: deltaPair(toRowMetrics(currInc).kpiExclusionRate, toRowMetrics(prevInc).kpiExclusionRate, toRowMetrics(yoyInc).kpiExclusionRate)
     }
   };
 }
@@ -734,8 +829,22 @@ function formatDelta(value, _isPercent) {
 function emptyCompare() {
   const zero = { mom: 0, yoy: 0 };
   return {
-    tasks: { total: zero, sameDayRate: zero, avgDuration: zero },
-    incidents: { total: zero, sameDayRate: zero, avgDuration: zero }
+    tasks: {
+      total: zero,
+      sameDayRate: zero,
+      avgDuration: zero,
+      within4hRate: zero,
+      within24hRate: zero,
+      kpiExclusionRate: zero
+    },
+    incidents: {
+      total: zero,
+      sameDayRate: zero,
+      avgDuration: zero,
+      within4hRate: zero,
+      within24hRate: zero,
+      kpiExclusionRate: zero
+    }
   };
 }
 

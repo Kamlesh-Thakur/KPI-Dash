@@ -8,10 +8,31 @@ import {
   getBranchEfficiencyData,
   getTeamPerformanceData,
   excelDateToJS,
-  formatDateShort
+  formatDateShort,
+  formatDuration,
+  formatNumber
 } from './dataStore.js';
 
 const chartInstances = {};
+
+/** Shown in top KPI cards; omitted from Task KPI Matrix heatmap. */
+const TASK_KPI_MATRIX_EXCLUDED_KEYS = new Set([
+  'closedWithinSla',
+  'closedSameDay',
+  'closedWithin24h',
+  'kpiAfterExclusion'
+]);
+
+const incidentCategoryShowAll = {};
+
+const branchTasksVolumeState = {
+  showAllBranches: false,
+  consideredOnly: false
+};
+
+function isRowConsideredForKpi(r) {
+  return (r['Exceptions'] || '').toString().toLowerCase().includes('consider');
+}
 
 const COLORS = {
   blue: '#6384ff',
@@ -173,7 +194,8 @@ export function renderTaskTypePie(containerId) {
   if (!chart) return;
   setTitle(titleEl, 'Task KPI Matrix', 'purple');
 
-  const { rows, metrics } = buildTaskKPIRows();
+  const { rows, metrics: allMetrics } = buildTaskKPIRows();
+  const metrics = allMetrics.filter((m) => !TASK_KPI_MATRIX_EXCLUDED_KEYS.has(m.key));
   const normalizedData = [];
   metrics.forEach((metric, metricIndex) => {
     const values = rows.map(r => Number(r[metric.key]) || 0);
@@ -338,66 +360,6 @@ function buildTaskKPIRows() {
   ];
 
   return { rows, metrics };
-}
-
-export function renderTaskKPIBars(containerId) {
-  const { chart, titleEl } = getOrCreate(containerId) || {};
-  if (!chart) return;
-  setTitle(titleEl, 'Task KPI Comparison (Alternative View)', 'cyan');
-
-  const { rows, metrics } = buildTaskKPIRows();
-  const percentMetrics = metrics.filter(m => m.kind === 'pct');
-
-  chart.setOption({
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' },
-      backgroundColor: 'rgba(17,24,39,0.95)',
-      borderColor: 'rgba(255,255,255,0.08)',
-      textStyle: { color: '#f1f5f9', fontSize: 12 },
-      formatter: (params) => {
-        if (!params?.length) return '';
-        const metricLabel = params[0].axisValue;
-        const lines = params
-          .filter(p => p.value > 0)
-          .map(p => `${p.marker} ${p.seriesName}: ${Number(p.value).toFixed(1)}%`);
-        return `${metricLabel}<br/>${lines.join('<br/>')}`;
-      }
-    },
-    legend: {
-      type: 'scroll',
-      top: 0,
-      textStyle: { color: '#94a3b8', fontSize: 10 },
-      pageTextStyle: { color: '#94a3b8' }
-    },
-    grid: { left: 60, right: 20, top: 44, bottom: 52 },
-    xAxis: {
-      type: 'category',
-      data: percentMetrics.map(m => m.label),
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 10, rotate: 18 },
-      axisTick: { show: false }
-    },
-    yAxis: {
-      type: 'value',
-      min: 0,
-      max: 1,
-      splitNumber: 5,
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-      axisLabel: { color: '#64748b', formatter: (v) => `${Math.round(v * 100)}%` }
-    },
-    color: PALETTE,
-    series: rows.map((row) => ({
-      name: row.task,
-      type: 'bar',
-      barMaxWidth: 20,
-      data: percentMetrics.map(m => row[m.key] || 0),
-      emphasis: {
-        focus: 'series'
-      }
-    })),
-    animationDuration: 1000
-  });
 }
 
 export function renderTaskTypeResolutionTargets(containerId) {
@@ -1207,18 +1169,56 @@ export function renderIncidentTrend(containerId) {
 }
 
 export function renderIncidentCategory(containerId) {
-  const { chart, titleEl } = getOrCreate(containerId) || {};
-  if (!chart) return;
-  setTitle(titleEl, 'Incident Categories', 'amber');
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (incidentCategoryShowAll[containerId] === undefined) incidentCategoryShowAll[containerId] = false;
+  const showAll = incidentCategoryShowAll[containerId];
+
+  el.innerHTML = '';
+  const header = document.createElement('div');
+  header.className = 'chart-card-header';
+  header.innerHTML = `
+    <div class="chart-title"><span class="dot amber"></span>Incident Categories</div>
+    <div class="chart-card-toolbar">
+      <button type="button" class="chart-toggle-btn ${!showAll ? 'active' : ''}" data-mode="top">Top 10</button>
+      <button type="button" class="chart-toggle-btn ${showAll ? 'active' : ''}" data-mode="all">All categories</button>
+    </div>
+  `;
+  const bodyEl = document.createElement('div');
+  bodyEl.className = 'chart-body';
+  el.appendChild(header);
+  el.appendChild(bodyEl);
+
+  header.querySelectorAll('.chart-toggle-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      incidentCategoryShowAll[containerId] = btn.dataset.mode === 'all';
+      renderIncidentCategory(containerId);
+    });
+  });
+
+  if (chartInstances[containerId]) {
+    chartInstances[containerId].dispose();
+    delete chartInstances[containerId];
+  }
+  const chart = echarts.init(bodyEl, null, { renderer: 'canvas' });
+  chartInstances[containerId] = chart;
 
   const data = getFilteredIncidentData();
   const catMap = {};
-  data.forEach(r => {
+  data.forEach((r) => {
     const c = r['Category'] || 'Unknown';
     catMap[c] = (catMap[c] || 0) + 1;
   });
 
-  const sorted = Object.entries(catMap).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  const sorted = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
+  const display = showAll ? sorted : sorted.slice(0, 10);
+  const names = display.map((s) => s[0]);
+  const counts = display.map((s) => s[1]);
+  const n = Math.max(names.length, 1);
+  const barH = Math.min(26, Math.max(14, 340 / n));
+  const bodyMinH = Math.max(280, n * barH + 72);
+  bodyEl.style.minHeight = `${bodyMinH}px`;
+  el.style.minHeight = `${bodyMinH + 100}px`;
 
   chart.setOption({
     tooltip: {
@@ -1235,15 +1235,15 @@ export function renderIncidentCategory(containerId) {
     },
     yAxis: {
       type: 'category',
-      data: sorted.map(s => s[0]).reverse(),
+      data: [...names].reverse(),
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
       axisLabel: { color: '#94a3b8', fontSize: 10, width: 160, overflow: 'truncate' },
       axisTick: { show: false }
     },
     series: [{
       type: 'bar',
-      data: sorted.map(s => s[1]).reverse(),
-      barWidth: 16,
+      data: [...counts].reverse(),
+      barMaxWidth: 22,
       itemStyle: {
         borderRadius: [0, 6, 6, 0],
         color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
@@ -1254,6 +1254,7 @@ export function renderIncidentCategory(containerId) {
     }],
     animationDuration: 1000
   });
+  chart.resize();
 }
 
 export function renderIncidentComplexity(containerId) {
@@ -1803,74 +1804,185 @@ export function renderSameDayClosure(containerId) {
 }
 
 export function renderBranchTasksVolume(containerId) {
-  const { chart, titleEl } = getOrCreate(containerId) || {};
-  if (!chart) return;
-  setTitle(titleEl, 'Task Volume by Branch & Type (Top 15)', 'cyan');
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const { showAllBranches, consideredOnly } = branchTasksVolumeState;
 
-  const data = getFilteredRawData();
+  el.innerHTML = '';
+  const header = document.createElement('div');
+  header.className = 'chart-card-header';
+  header.innerHTML = `
+    <div class="chart-title"><span class="dot cyan"></span>Branch Task Volume & Avg Duration</div>
+    <div class="chart-card-toolbar chart-card-toolbar--wrap">
+      <div class="chart-toolbar-group">
+        <span class="chart-toolbar-label">Branches</span>
+        <button type="button" class="chart-toggle-btn ${!showAllBranches ? 'active' : ''}" data-branches="top">Top 15</button>
+        <button type="button" class="chart-toggle-btn ${showAllBranches ? 'active' : ''}" data-branches="all">All</button>
+      </div>
+      <div class="chart-toolbar-group">
+        <span class="chart-toolbar-label">Scope</span>
+        <button type="button" class="chart-toggle-btn ${!consideredOnly ? 'active' : ''}" data-scope="all">All tasks</button>
+        <button type="button" class="chart-toggle-btn ${consideredOnly ? 'active' : ''}" data-scope="considered">Considered</button>
+      </div>
+    </div>
+  `;
+  const bodyEl = document.createElement('div');
+  bodyEl.className = 'chart-body';
+  el.appendChild(header);
+  el.appendChild(bodyEl);
 
-  // Get task types
-  const taskTypes = new Set();
-  data.forEach(r => { if (r['Task Type']) taskTypes.add(r['Task Type']); });
-  const types = [...taskTypes];
-
-  // Group by branch
-  const branchMap = {};
-  data.forEach(r => {
-    const b = r['Branch'] || 'N/A';
-    const t = r['Task Type'] || 'Unknown';
-    if (!branchMap[b]) branchMap[b] = {};
-    branchMap[b][t] = (branchMap[b][t] || 0) + 1;
+  header.querySelectorAll('[data-branches]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      branchTasksVolumeState.showAllBranches = btn.dataset.branches === 'all';
+      renderBranchTasksVolume(containerId);
+    });
+  });
+  header.querySelectorAll('[data-scope]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      branchTasksVolumeState.consideredOnly = btn.dataset.scope === 'considered';
+      renderBranchTasksVolume(containerId);
+    });
   });
 
-  // Sort by total
-  const sorted = Object.entries(branchMap)
-    .map(([name, types_]) => ({ name, types: types_, total: Object.values(types_).reduce((a, b) => a + b, 0) }))
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 15);
+  if (chartInstances[containerId]) {
+    chartInstances[containerId].dispose();
+    delete chartInstances[containerId];
+  }
+  const chart = echarts.init(bodyEl, null, { renderer: 'canvas' });
+  chartInstances[containerId] = chart;
 
-  const branches = sorted.map(s => s.name);
+  let rows = getFilteredRawData();
+  if (consideredOnly) rows = rows.filter(isRowConsideredForKpi);
+
+  const branchMap = {};
+  rows.forEach((r) => {
+    const b = r['Branch'] || 'N/A';
+    if (!branchMap[b]) branchMap[b] = { count: 0, durSum: 0 };
+    branchMap[b].count += 1;
+    branchMap[b].durSum += parseFloat(r['Duration']) || 0;
+  });
+
+  let list = Object.entries(branchMap)
+    .map(([name, v]) => ({
+      name,
+      total: v.count,
+      avgDuration: v.count ? v.durSum / v.count : 0
+    }))
+    .sort((a, b) => b.total - a.total);
+
+  if (!showAllBranches) list = list.slice(0, 15);
+
+  const names = list.map((x) => x.name);
+  const volumes = list.map((x) => x.total);
+  const avgDays = list.map((x) => x.avgDuration);
+  const maxAvg = Math.max(...avgDays, 0.01) * 1.15;
+  const n = Math.max(names.length, 1);
+  const rowH = Math.min(24, Math.max(16, 360 / n));
+  const bodyMinH = Math.max(320, n * rowH + 120);
+  bodyEl.style.minHeight = `${bodyMinH}px`;
+  el.style.minHeight = `${bodyMinH + 110}px`;
+
+  if (list.length === 0) {
+    chart.setOption({
+      title: {
+        text: consideredOnly ? 'No Considered tasks in this period' : 'No task data for branches',
+        left: 'center',
+        top: 'center',
+        textStyle: { color: '#94a3b8', fontSize: 14, fontWeight: 500 }
+      },
+      xAxis: { show: false },
+      yAxis: { show: false },
+      series: []
+    });
+    chart.resize();
+    return;
+  }
+
+  const namesRev = [...names].reverse();
+  const volRev = [...volumes].reverse();
+  const avgRev = [...avgDays].reverse();
 
   chart.setOption({
     tooltip: {
       trigger: 'axis',
+      axisPointer: { type: 'shadow' },
       backgroundColor: 'rgba(17,24,39,0.95)',
       borderColor: 'rgba(255,255,255,0.08)',
       textStyle: { color: '#f1f5f9', fontSize: 12 },
-      axisPointer: { type: 'shadow' }
+      formatter: (params) => {
+        if (!params?.length) return '';
+        const branch = params[0].name;
+        const row = list.find((l) => l.name === branch);
+        if (!row) return '';
+        const scope = consideredOnly ? ' (Considered)' : '';
+        return `${branch}${scope}<br/>Tasks: ${formatNumber(row.total)}<br/>Avg duration: ${formatDuration(row.avgDuration)}`;
+      }
     },
     legend: {
-      data: types,
-      type: 'scroll',
-      textStyle: { color: '#94a3b8', fontSize: 10 },
-      pageTextStyle: { color: '#94a3b8' },
+      data: ['Task volume', 'Avg duration'],
+      textStyle: { color: '#94a3b8', fontSize: 11 },
       top: 0
     },
-    grid: { left: 100, right: 20, top: 40, bottom: 20 },
-    color: PALETTE,
-    xAxis: {
-      type: 'value',
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-      axisLabel: { color: '#64748b', fontSize: 10 }
-    },
+    grid: { left: '14%', right: '10%', top: 44, bottom: 32 },
+    xAxis: [
+      {
+        type: 'value',
+        name: 'Tasks',
+        position: 'bottom',
+        nameTextStyle: { color: '#64748b', fontSize: 10 },
+        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
+        axisLabel: { color: '#64748b', fontSize: 10 }
+      },
+      {
+        type: 'value',
+        name: 'Avg days',
+        position: 'top',
+        nameTextStyle: { color: '#64748b', fontSize: 10 },
+        max: maxAvg,
+        splitLine: { show: false },
+        axisLabel: {
+          color: '#64748b',
+          fontSize: 10,
+          formatter: (v) => Number(v).toFixed(1)
+        }
+      }
+    ],
     yAxis: {
       type: 'category',
-      data: branches.reverse(),
+      data: namesRev,
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 10 },
+      axisLabel: { color: '#94a3b8', fontSize: 10, width: 130, overflow: 'truncate' },
       axisTick: { show: false }
     },
-    series: types.map(type => ({
-      name: type,
-      type: 'bar',
-      stack: 'total',
-      data: branches.map(b => {
-        const entry = sorted.find(s => s.name === b);
-        return entry ? (entry.types[type] || 0) : 0;
-      }),
-      barWidth: 16,
-      itemStyle: { borderRadius: 0 }
-    })),
-    animationDuration: 1200
+    series: [
+      {
+        name: 'Task volume',
+        type: 'bar',
+        xAxisIndex: 0,
+        data: volRev,
+        barMaxWidth: 18,
+        itemStyle: {
+          borderRadius: [0, 6, 6, 0],
+          color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+            { offset: 0, color: COLORS.cyan },
+            { offset: 1, color: COLORS.blue }
+          ])
+        }
+      },
+      {
+        name: 'Avg duration',
+        type: 'line',
+        xAxisIndex: 1,
+        yAxisIndex: 0,
+        data: avgRev,
+        symbol: 'circle',
+        symbolSize: 8,
+        lineStyle: { width: 2.5, color: COLORS.amber },
+        itemStyle: { color: COLORS.amber },
+        emphasis: { focus: 'series' }
+      }
+    ],
+    animationDuration: 900
   });
+  chart.resize();
 }
