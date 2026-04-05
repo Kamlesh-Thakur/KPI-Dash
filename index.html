@@ -104,7 +104,30 @@
             <option value="custom">Custom Range</option>
           </select>
           <input class="date-input" id="filter-date-anchor" type="date" aria-label="Reference date" />
-          <input class="date-input" id="filter-date-week" type="week" aria-label="Week picker" />
+          <div class="week-filter-wrap" id="week-filter-wrap">
+            <input type="hidden" id="filter-date-week" value="" />
+            <div class="week-picker-shell">
+              <button type="button" class="week-picker-trigger" id="week-picker-trigger" aria-expanded="false" aria-haspopup="dialog" aria-controls="week-calendar-popover" title="Week is Sunday through Saturday">
+                <span class="week-picker-trigger-text" id="week-picker-trigger-text">—</span>
+                <svg class="week-picker-chevron" width="12" height="12" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+              </button>
+              <div class="week-calendar-popover" id="week-calendar-popover" role="dialog" aria-label="Select week, Sunday through Saturday" hidden>
+                <div class="week-calendar-head">
+                  <button type="button" class="week-cal-nav" id="week-cal-prev" aria-label="Previous month">‹</button>
+                  <span class="week-cal-title" id="week-cal-title">—</span>
+                  <button type="button" class="week-cal-nav" id="week-cal-next" aria-label="Next month">›</button>
+                </div>
+                <div class="week-cal-weekdays" aria-hidden="true">
+                  <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+                </div>
+                <div class="week-cal-grid" id="week-cal-grid"></div>
+                <div class="week-cal-footer">
+                  <button type="button" class="week-cal-link" id="week-cal-close">Close</button>
+                  <button type="button" class="week-cal-link week-cal-link--primary" id="week-cal-today">This week</button>
+                </div>
+              </div>
+            </div>
+          </div>
           <input class="date-input" id="filter-date-month" type="month" aria-label="Month picker" />
           <input class="date-input" id="filter-date-from" type="date" aria-label="Start date" />
           <span class="date-separator" id="date-separator">to</span>

@@ -77,6 +77,16 @@ function toDateOnly(date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
+/** Calendar week Sunday–Saturday (local dates), US convention. Anchor may be any day in that week. */
+function weekRangeSunToSat(anchor) {
+  const start = new Date(anchor);
+  const dow = start.getDay(); // 0 = Sunday … 6 = Saturday
+  start.setDate(start.getDate() - dow);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  return { start, end };
+}
+
 function parseDateInput(value) {
   if (!value) return null;
   const parsed = new Date(value);
@@ -123,11 +133,7 @@ function isWithinDateFilter(rowDate, filters) {
   }
 
   if (mode === 'weekly') {
-    const start = new Date(anchor);
-    const day = start.getDay() || 7;
-    start.setDate(start.getDate() - (day - 1));
-    const end = new Date(start);
-    end.setDate(end.getDate() + 6);
+    const { start, end } = weekRangeSunToSat(anchor);
     return rowDate >= start && rowDate <= end;
   }
 
@@ -303,12 +309,7 @@ export function getDateFilterRange(filters = STATE.filters) {
   if (mode === 'daily') return { start: anchor, end: anchor };
 
   if (mode === 'weekly') {
-    const start = new Date(anchor);
-    const day = start.getDay() || 7;
-    start.setDate(start.getDate() - (day - 1));
-    const end = new Date(start);
-    end.setDate(end.getDate() + 6);
-    return { start, end };
+    return weekRangeSunToSat(anchor);
   }
 
   if (mode === 'monthly') {
