@@ -96,7 +96,7 @@
           <div class="compare-context compare-context-dropdown" id="compare-context" role="region" aria-label="Comparison date ranges" hidden></div>
         </div>
         <div class="date-filter-group" id="date-filter-group">
-          <select class="filter-select" id="filter-date-mode" aria-label="Date filter mode">
+          <select class="filter-select filter-select--modern" id="filter-date-mode" aria-label="Date filter mode">
             <option value="overall">Overall</option>
             <option value="daily">Daily</option>
             <option value="weekly">Weekly</option>
@@ -160,18 +160,16 @@
             <button type="button" class="week-cal-link week-cal-link--primary" id="cal-footer-today">Today</button>
           </div>
         </div>
-        <div class="filter-group" id="filter-group">
-          <select class="filter-select" id="filter-division">
-            <option value="">All Divisions</option>
+        <div class="filter-group filter-group--cascade" id="filter-group">
+          <select class="filter-select filter-select--modern" id="filter-by-dimension" aria-label="Filter by">
+            <option value="">Filter by</option>
+            <option value="division">Divisions</option>
+            <option value="region">Regions</option>
+            <option value="branch">Branches</option>
+            <option value="taskType">Task types</option>
           </select>
-          <select class="filter-select" id="filter-region">
-            <option value="">All Regions</option>
-          </select>
-          <select class="filter-select" id="filter-branch">
-            <option value="">All Branches</option>
-          </select>
-          <select class="filter-select" id="filter-task-type">
-            <option value="">All Task Types</option>
+          <select class="filter-select filter-select--modern filter-by-value" id="filter-by-value" aria-label="Filter value" disabled title="Choose a filter type first">
+            <option value="">Select value…</option>
           </select>
         </div>
         <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to light mode" title="Switch to light mode">

@@ -13,6 +13,7 @@ const STATE = {
   branchMapping: [],
   dropdowns: [],
   filters: {
+    filterBy: '',
     division: '',
     region: '',
     branch: '',
@@ -347,18 +348,29 @@ export function getFilteredIncidentDataForRange(startDate, endDate, filters = ST
 
 function applyRawDimensionFilters(data, filters) {
   let out = data;
-  if (filters.division) out = out.filter(r => r['Division'] === filters.division);
-  if (filters.region) out = out.filter(r => r['Region'] === filters.region);
-  if (filters.branch) out = out.filter(r => r['Branch'] === filters.branch);
-  if (filters.taskType) out = out.filter(r => r['Task Type'] === filters.taskType);
+  const fb = filters.filterBy || '';
+  if (fb === 'division' && filters.division) {
+    out = out.filter((r) => r['Division'] === filters.division);
+  } else if (fb === 'region' && filters.region) {
+    out = out.filter((r) => r['Region'] === filters.region);
+  } else if (fb === 'branch' && filters.branch) {
+    out = out.filter((r) => r['Branch'] === filters.branch);
+  } else if (fb === 'taskType' && filters.taskType) {
+    out = out.filter((r) => r['Task Type'] === filters.taskType);
+  }
   return out;
 }
 
 function applyIncidentDimensionFilters(data, filters) {
   let out = data;
-  if (filters.division) out = out.filter(r => r['Division'] === filters.division);
-  if (filters.region) out = out.filter(r => r['Region'] === filters.region);
-  if (filters.branch) out = out.filter(r => (r['Branch_1'] || r['Branch']) === filters.branch);
+  const fb = filters.filterBy || '';
+  if (fb === 'division' && filters.division) {
+    out = out.filter((r) => r['Division'] === filters.division);
+  } else if (fb === 'region' && filters.region) {
+    out = out.filter((r) => r['Region'] === filters.region);
+  } else if (fb === 'branch' && filters.branch) {
+    out = out.filter((r) => (r['Branch_1'] || r['Branch']) === filters.branch);
+  }
   return out;
 }
 

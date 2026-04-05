@@ -24,6 +24,7 @@ import {
   resizeCharts
 } from './charts.js';
 import { createCalendarPicker } from './calendarPicker.js';
+import { mountCustomSelect, syncCustomSelect } from './customSelect.js';
 
 // ==========================================
 // STATE
@@ -51,6 +52,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initNavigation();
   initFilters();
   initDateFilters();
+  mountFilterCustomSelects();
+  populateFilters();
   initUpload();
   initExport();
   initMenuToggle();
@@ -161,19 +164,39 @@ function switchTab(tab) {
 // ==========================================
 // FILTERS
 // ==========================================
+function mountFilterCustomSelects() {
+  ['filter-date-mode', 'filter-by-dimension', 'filter-by-value'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) mountCustomSelect(el);
+  });
+}
+
 function initFilters() {
-  ['filter-division', 'filter-region', 'filter-branch', 'filter-task-type'].forEach(id => {
-    document.getElementById(id).addEventListener('change', (e) => {
-      const key = id.replace('filter-', '').replace('-', '');
-      const keyMap = {
-        'division': 'division',
-        'region': 'region',
-        'branch': 'branch',
-        'tasktype': 'taskType'
-      };
-      setFilter(keyMap[key], e.target.value);
-      renderAll();
-    });
+  const dimEl = document.getElementById('filter-by-dimension');
+  const valEl = document.getElementById('filter-by-value');
+  if (!dimEl || !valEl) return;
+
+  dimEl.addEventListener('change', () => {
+    setFilter('filterBy', dimEl.value);
+    setFilter('division', '');
+    setFilter('region', '');
+    setFilter('branch', '');
+    setFilter('taskType', '');
+    populateFilters();
+    renderAll();
+  });
+
+  valEl.addEventListener('change', () => {
+    const fb = getState().filters.filterBy;
+    if (!fb) return;
+    const keyMap = {
+      division: 'division',
+      region: 'region',
+      branch: 'branch',
+      taskType: 'taskType'
+    };
+    setFilter(keyMap[fb], valEl.value);
+    renderAll();
   });
 }
 
@@ -304,21 +327,58 @@ function monthToDate(monthValue) {
 }
 
 function populateFilters() {
-  populateSelect('filter-division', getUniqueValues('Division'), 'All Divisions');
-  populateSelect('filter-region', getUniqueValues('Region'), 'All Regions');
-  populateSelect('filter-branch', getUniqueValues('Branch'), 'All Branches');
-  populateSelect('filter-task-type', getUniqueValues('Task Type'), 'All Task Types');
-}
+  const dimEl = document.getElementById('filter-by-dimension');
+  const valEl = document.getElementById('filter-by-value');
+  if (!dimEl || !valEl) return;
 
-function populateSelect(id, values, defaultText) {
-  const el = document.getElementById(id);
-  el.innerHTML = `<option value="">${defaultText}</option>`;
-  values.forEach(v => {
-    const opt = document.createElement('option');
-    opt.value = v;
-    opt.textContent = v;
-    el.appendChild(opt);
+  const f = getState().filters;
+  const filterBy = f.filterBy || '';
+
+  dimEl.value = filterBy;
+
+  const placeholder = {
+    '': 'Select value…',
+    division: 'All divisions',
+    region: 'All regions',
+    branch: 'All branches',
+    taskType: 'All task types'
+  };
+
+  valEl.innerHTML = '';
+  if (!filterBy) {
+    valEl.disabled = true;
+    valEl.title = 'Choose a filter type first';
+    valEl.appendChild(new Option(placeholder[''], ''));
+    syncCustomSelect(dimEl);
+    syncCustomSelect(valEl);
+    return;
+  }
+
+  valEl.disabled = false;
+  valEl.title = 'Choose a value';
+  valEl.appendChild(new Option(placeholder[filterBy], ''));
+
+  const columnMap = {
+    division: 'Division',
+    region: 'Region',
+    branch: 'Branch',
+    taskType: 'Task Type'
+  };
+  const col = columnMap[filterBy];
+  getUniqueValues(col, 'raw').forEach((v) => {
+    valEl.appendChild(new Option(v, v));
   });
+
+  const keyMap = {
+    division: 'division',
+    region: 'region',
+    branch: 'branch',
+    taskType: 'taskType'
+  };
+  const cur = f[keyMap[filterBy]] || '';
+  valEl.value = cur;
+  syncCustomSelect(dimEl);
+  syncCustomSelect(valEl);
 }
 
 // ==========================================
