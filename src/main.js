@@ -745,8 +745,8 @@ function renderKPICards() {
     <div class="kpi-section kpi-section--tasks" role="group" aria-label="Tasks KPIs">
       <div class="kpi-section-label">Tasks</div>
       <div class="kpi-section-inner">
-        <div class="kpi-card blue" title="Total Tasks — count for current filters">
-          <div class="kpi-label">Total Tasks</div>
+        <div class="kpi-card blue" title="Total — count for current filters">
+          <div class="kpi-label">Total</div>
           <div class="kpi-value">${formatNumber(total)}</div>
           <div class="kpi-change">${taskTypes} types</div>
           ${showComparisons ? renderCompareRow(compare.tasks.total, false, compareChipLabels) : ''}
@@ -961,8 +961,8 @@ function calcDelta(current, base) {
 function renderCompareRow(pair, isPercent, chipLabels) {
   const L = chipLabels || getCompareChipLabels();
   return `<div class="kpi-compare">
-    <span class="compare-chip ${pair.mom >= 0 ? 'up' : 'down'}" title="${escapeAttr(L.prevTitle)}">${L.prevCode} ${formatDelta(pair.mom, isPercent)}</span>
-    <span class="compare-chip ${pair.yoy >= 0 ? 'up' : 'down'}" title="${escapeAttr(L.yoyTitle)}">${L.yoyCode} ${formatDelta(pair.yoy, isPercent)}</span>
+    <span class="compare-chip ${pair.mom >= 0 ? 'up' : 'down'}" title="${escapeAttr(L.prevTitle)}"><span class="compare-chip-label">${escapeAttr(L.prevCode)}</span><span class="compare-chip-delta">${formatDelta(pair.mom, isPercent)}</span></span>
+    <span class="compare-chip ${pair.yoy >= 0 ? 'up' : 'down'}" title="${escapeAttr(L.yoyTitle)}"><span class="compare-chip-label">${escapeAttr(L.yoyCode)}</span><span class="compare-chip-delta">${formatDelta(pair.yoy, isPercent)}</span></span>
   </div>`;
 }
 

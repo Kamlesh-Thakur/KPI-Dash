@@ -363,7 +363,7 @@ body.sidebar-collapsed .nav-item span {
 .top-header {
   position: sticky;
   top: 0;
-  z-index: 50;
+  z-index: 110;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -486,6 +486,11 @@ body.sidebar-collapsed .nav-item span {
   position: relative;
   display: flex;
   align-items: center;
+  z-index: 120;
+}
+
+.compare-details-anchor[hidden] {
+  display: none !important;
 }
 
 .compare-details-btn {
@@ -517,8 +522,9 @@ body.sidebar-collapsed .nav-item span {
 .compare-context-dropdown {
   position: absolute;
   top: calc(100% + 8px);
-  right: 0;
-  z-index: 60;
+  left: 0;
+  right: auto;
+  z-index: 130;
   margin: 0 !important;
   min-width: min(400px, calc(100vw - 48px));
   max-width: 440px;
@@ -526,6 +532,9 @@ body.sidebar-collapsed .nav-item span {
   overflow-y: auto;
   box-shadow: var(--shadow-card);
   text-align: left;
+  background: var(--bg-secondary);
+  backdrop-filter: none;
+  border: 1px solid var(--border-primary);
 }
 
 .theme-toggle-icon {
@@ -883,8 +892,9 @@ body.theme-light .kpi-section-inner .kpi-card.red .kpi-value { color: #e11d48; }
 }
 
 .kpi-section-inner .compare-chip {
-  font-size: 0.62rem;
-  padding: 2px 6px;
+  font-size: 0.78rem;
+  padding: 4px 9px;
+  gap: 6px;
 }
 
 .kpi-card {
@@ -979,6 +989,15 @@ body.theme-light .kpi-section-inner .kpi-card.red .kpi-value { color: #e11d48; }
   font-weight: 500;
 }
 
+.compare-context.compare-context-dropdown {
+  background: var(--bg-secondary);
+  backdrop-filter: none;
+}
+
+body.theme-light .compare-context.compare-context-dropdown {
+  background: #f8fafc;
+}
+
 .compare-context-inner {
   margin: 0;
 }
@@ -998,7 +1017,7 @@ body.theme-light .kpi-section-inner .kpi-card.red .kpi-value { color: #e11d48; }
 
 .compare-context-row {
   display: grid;
-  grid-template-columns: minmax(8.5rem, 1fr) minmax(0, 2fr);
+  grid-template-columns: minmax(12.5rem, 1fr) minmax(0, 2fr);
   gap: 6px 14px;
   align-items: baseline;
   padding: 6px 0;
@@ -1014,6 +1033,7 @@ body.theme-light .kpi-section-inner .kpi-card.red .kpi-value { color: #e11d48; }
   margin: 0;
   color: var(--text-muted);
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .compare-context-row dd {
@@ -1052,6 +1072,10 @@ body.theme-light .compare-context-code {
     gap: 2px;
   }
 
+  .compare-context-row dt {
+    white-space: normal;
+  }
+
   .compare-context-row dd {
     text-align: left;
     padding-bottom: 4px;
@@ -1059,9 +1083,12 @@ body.theme-light .compare-context-code {
 }
 
 .compare-chip {
-  font-size: 0.7rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.78rem;
   font-weight: 600;
-  padding: 3px 8px;
+  padding: 4px 9px;
   border-radius: 999px;
   border: 1px solid var(--border-primary);
   background: var(--bg-glass);
@@ -1069,14 +1096,30 @@ body.theme-light .compare-context-code {
   cursor: help;
 }
 
+.compare-chip-label {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.compare-chip-delta {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
 .compare-chip.up {
-  color: var(--accent-green);
   border-color: rgba(52, 211, 153, 0.35);
 }
 
+.compare-chip.up .compare-chip-delta {
+  color: var(--accent-green);
+}
+
 .compare-chip.down {
-  color: var(--accent-red);
   border-color: rgba(248, 113, 113, 0.35);
+}
+
+.compare-chip.down .compare-chip-delta {
+  color: var(--accent-red);
 }
 
 /* === Charts === */
