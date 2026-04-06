@@ -22,8 +22,11 @@ function nepaliFromAd(d) {
   return new NepaliDate(d);
 }
 
-/** Never throw — chart/grid formatters must not break renderAll */
-function safeNepaliFormat(d, pattern, lang = 'np') {
+/**
+ * Latin Bikram Sambat labels (Chaitra, Falgun, …) — same idea as the calendar picker, not Devanagari.
+ * Second arg to NepaliDate.format: 'en' = English month names, 'np' = Nepali script.
+ */
+function safeNepaliFormat(d, pattern, lang = 'en') {
   try {
     return nepaliFromAd(d).format(pattern, lang);
   } catch (e) {
@@ -45,7 +48,7 @@ export function formatDisplayDate(d) {
   if (!d || !(d instanceof Date) || isNaN(d.getTime())) return '—';
   try {
     if (getCalendarSystem() === 'nepali') {
-      return safeNepaliFormat(d, 'DD MMMM YYYY', 'np');
+      return safeNepaliFormat(d, 'DD MMMM YYYY', 'en');
     }
     return englishIso(d);
   } catch (e) {
@@ -58,7 +61,7 @@ export function formatDisplayDateShort(d) {
   if (!d || !(d instanceof Date) || isNaN(d.getTime())) return '—';
   try {
     if (getCalendarSystem() === 'nepali') {
-      return safeNepaliFormat(d, 'DD MMM, YYYY', 'np');
+      return safeNepaliFormat(d, 'DD MMM, YYYY', 'en');
     }
     return englishShort(d);
   } catch (e) {
@@ -66,14 +69,14 @@ export function formatDisplayDateShort(d) {
   }
 }
 
-/** Compact chart x-axis */
+/** Chart x-axis / single-point display: full month name + day */
 export function formatDisplayDateAxis(d) {
   if (!d || !(d instanceof Date) || isNaN(d.getTime())) return '';
   try {
     if (getCalendarSystem() === 'nepali') {
-      return safeNepaliFormat(d, 'DD MMM', 'np');
+      return safeNepaliFormat(d, 'MMMM DD', 'en');
     }
-    return englishShort(d);
+    return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
   } catch (e) {
     return englishShort(d);
   }
@@ -89,13 +92,33 @@ export function formatDisplayDateAxisFromCategory(value) {
   }
 }
 
+/**
+ * Time-series category axis: full month name + day on every tick (BS: MMMM DD, AD: long month).
+ * `index` / `categories` kept for call-site compatibility with ECharts formatters.
+ */
+export function formatCategoryAxisDateLabel(value, index, categories) {
+  try {
+    if (!Array.isArray(categories) || categories.length === 0) {
+      return formatDisplayDateAxisFromCategory(value);
+    }
+    const d = categoryStringToLocalDate(value);
+    if (!d || isNaN(d.getTime())) return String(value ?? '');
+    if (getCalendarSystem() === 'nepali') {
+      return safeNepaliFormat(d, 'MMMM DD', 'en');
+    }
+    return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+  } catch (e) {
+    return formatDisplayDateAxisFromCategory(value);
+  }
+}
+
 export function formatDisplayDateRange(start, end) {
   if (!start || !end || !(start instanceof Date) || !(end instanceof Date)) return '—';
   if (isNaN(start.getTime()) || isNaN(end.getTime())) return '—';
   try {
     if (getCalendarSystem() === 'nepali') {
-      const a = safeNepaliFormat(start, 'DD MMM YYYY', 'np');
-      const b = safeNepaliFormat(end, 'DD MMM YYYY', 'np');
+      const a = safeNepaliFormat(start, 'DD MMM YYYY', 'en');
+      const b = safeNepaliFormat(end, 'DD MMM YYYY', 'en');
       if (start.getTime() === end.getTime()) return a;
       return `${a} – ${b}`;
     }
@@ -119,11 +142,11 @@ export function buildAxisTooltipHtmlWithDates(params) {
     let header;
     if (d && !isNaN(d.getTime())) {
       if (getCalendarSystem() === 'nepali') {
-        header = safeNepaliFormat(d, 'ddd DD, MMMM YYYY', 'np');
+        header = safeNepaliFormat(d, 'ddd DD, MMMM YYYY', 'en');
       } else {
         header = d.toLocaleDateString('en-US', {
           weekday: 'short',
-          month: 'short',
+          month: 'long',
           day: 'numeric',
           year: 'numeric'
         });

@@ -11,7 +11,7 @@ import {
   formatDuration,
   formatNumber
 } from './dataStore.js';
-import { formatDisplayDateAxisFromCategory, buildAxisTooltipHtmlWithDates } from './dateDisplay.js';
+import { formatCategoryAxisDateLabel, buildAxisTooltipHtmlWithDates } from './dateDisplay.js';
 
 const chartInstances = {};
 
@@ -137,28 +137,28 @@ export function renderTasksTrend(containerId) {
       trigger: 'axis',
       backgroundColor: 'rgba(17,24,39,0.95)',
       borderColor: 'rgba(255,255,255,0.08)',
-      textStyle: { color: '#f1f5f9', fontSize: 12 },
+      textStyle: { color: '#f1f5f9', fontSize: 13 },
       formatter: (params) => buildAxisTooltipHtmlWithDates(params)
     },
     legend: {
       data: ['Tasks', 'Incidents'],
-      textStyle: { color: '#94a3b8', fontSize: 11 },
+      textStyle: { color: '#94a3b8', fontSize: 12 },
       top: 0
     },
-    grid: { left: 50, right: 20, top: 20, bottom: 40 },
+    grid: { left: 52, right: 20, top: 24, bottom: 56 },
     xAxis: {
       type: 'category',
       data: allDates,
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#64748b', fontSize: 10, rotate: 30,
-        formatter: (v) => formatDisplayDateAxisFromCategory(v)
+      axisLabel: { color: '#64748b', fontSize: 12, rotate: 30,
+        formatter: (v, idx) => formatCategoryAxisDateLabel(v, idx, allDates)
       },
       axisTick: { show: false }
     },
     yAxis: {
       type: 'value',
       splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-      axisLabel: { color: '#64748b', fontSize: 10 }
+      axisLabel: { color: '#64748b', fontSize: 12 }
     },
     series: [{
       name: 'Tasks',
@@ -229,26 +229,26 @@ export function renderTaskTypePie(containerId) {
       position: 'top',
       backgroundColor: 'rgba(17,24,39,0.95)',
       borderColor: 'rgba(255,255,255,0.08)',
-      textStyle: { color: '#f1f5f9', fontSize: 12 },
+      textStyle: { color: '#f1f5f9', fontSize: 13 },
       formatter: (p) => {
         const row = rows[p.data[1]];
         const metric = metrics[p.data[0]];
         return `${row.task}<br/>${metric.label}: ${formatValue(p.data[3], p.data[4])}`;
       }
     },
-    grid: { left:100,right: 20, top: 50, bottom: 58 },
+    grid: { left: 100, right: 20, top: 52, bottom: 68 },
     xAxis: {
       type: 'category',
       data: metrics.map(m => m.label),
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 10, rotate: 25 },
+      axisLabel: { color: '#94a3b8', fontSize: 12, rotate: 25 },
       axisTick: { show: false }
     },
     yAxis: {
       type: 'category',
       data: rows.map(r => r.task),
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 10, width: 130, overflow: 'truncate' },
+      axisLabel: { color: '#94a3b8', fontSize: 12, width: 130, overflow: 'truncate' },
       axisTick: { show: false }
     },
     visualMap: {
@@ -262,7 +262,7 @@ export function renderTaskTypePie(containerId) {
       inRange: {
         color: ['rgba(99,132,255,0.12)', 'rgba(99,132,255,0.95)']
       },
-      textStyle: { color: '#94a3b8' }
+      textStyle: { color: '#94a3b8', fontSize: 12 }
     },
     series: [{
       type: 'heatmap',
@@ -270,7 +270,8 @@ export function renderTaskTypePie(containerId) {
       label: {
         show: true,
         color: document.body.classList.contains('theme-light') ? '#0f172a' : '#f8fafc',
-        fontSize: 9,
+        fontSize: 12,
+        fontWeight: 600,
         formatter: (p) => formatValue(p.data[3], p.data[4])
       },
       itemStyle: {
@@ -397,16 +398,16 @@ export function renderTaskTypeResolutionTargets(containerId) {
       type: 'category',
       data: labels,
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 10, rotate: 30 },
+      axisLabel: { color: '#94a3b8', fontSize: 12, rotate: 30 },
       axisTick: { show: false }
     },
     yAxis: [
       {
         type: 'value',
         name: 'Count',
-        nameTextStyle: { color: '#64748b', fontSize: 10 },
+        nameTextStyle: { color: '#64748b', fontSize: 12 },
         splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-        axisLabel: { color: '#64748b', fontSize: 10 }
+        axisLabel: { color: '#64748b', fontSize: 12 }
       },
       {
         type: 'value',
@@ -414,7 +415,7 @@ export function renderTaskTypeResolutionTargets(containerId) {
         min: 0,
         max: 100,
         splitLine: { show: false },
-        axisLabel: { color: '#64748b', fontSize: 10, formatter: '{value}%' }
+        axisLabel: { color: '#64748b', fontSize: 12, formatter: '{value}%' }
       }
     ],
     series: [
@@ -541,13 +542,13 @@ export function renderRepeatedSupportWindow(containerId) {
       type: 'category',
       data: buckets.map(b => b.label),
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 11 },
+      axisLabel: { color: '#94a3b8', fontSize: 12 },
       axisTick: { show: false }
     },
     yAxis: {
       type: 'value',
       splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-      axisLabel: { color: '#64748b', fontSize: 10 }
+      axisLabel: { color: '#64748b', fontSize: 12 }
     },
     series: [{
       name: 'Repeated Support Count',
@@ -565,7 +566,7 @@ export function renderRepeatedSupportWindow(containerId) {
         show: true,
         position: 'top',
         color: '#94a3b8',
-        fontSize: 10
+        fontSize: 12
       }
     }],
     animationDuration: 900
@@ -599,13 +600,13 @@ export function renderImmediateSupportWindow(containerId) {
       type: 'category',
       data: buckets.map(b => b.label),
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 11 },
+      axisLabel: { color: '#94a3b8', fontSize: 12 },
       axisTick: { show: false }
     },
     yAxis: {
       type: 'value',
       splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-      axisLabel: { color: '#64748b', fontSize: 10 }
+      axisLabel: { color: '#64748b', fontSize: 12 }
     },
     series: [{
       name: 'Immediate Support Count',
@@ -623,7 +624,7 @@ export function renderImmediateSupportWindow(containerId) {
         show: true,
         position: 'top',
         color: '#94a3b8',
-        fontSize: 10
+        fontSize: 12
       }
     }],
     animationDuration: 900
@@ -659,20 +660,20 @@ function renderSupportBranchChart(chart, branches, seriesByWindow) {
     },
     legend: {
       data: ['Within 1 day', 'Within 3 days', 'Within 7 days', 'Within 30 days'],
-      textStyle: { color: '#94a3b8', fontSize: 10 },
+      textStyle: { color: '#94a3b8', fontSize: 12 },
       top: 0
     },
     grid: { left: 95, right: 20, top: 34, bottom: 24 },
     xAxis: {
       type: 'value',
       splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-      axisLabel: { color: '#64748b', fontSize: 10 }
+      axisLabel: { color: '#64748b', fontSize: 12 }
     },
     yAxis: {
       type: 'category',
       data: branches.reverse(),
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 10 },
+      axisLabel: { color: '#94a3b8', fontSize: 12 },
       axisTick: { show: false }
     },
     series: [
@@ -758,7 +759,7 @@ export function renderTeamTopScores(containerId) {
       type: 'category',
       data: top.map(r => r.agent.split('[')[0].trim()).reverse(),
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 10, width: 260, overflow: 'truncate' },
+      axisLabel: { color: '#94a3b8', fontSize: 12, width: 260, overflow: 'truncate' },
       axisTick: { show: false }
     },
     series: [{
@@ -802,7 +803,7 @@ export function renderTeamPerformanceByBranch(containerId) {
       type: 'category',
       data: rows.map(r => r.branch),
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 10, rotate: 30 },
+      axisLabel: { color: '#94a3b8', fontSize: 12, rotate: 30 },
       axisTick: { show: false }
     },
     yAxis: {
@@ -892,13 +893,13 @@ export function renderRegionBar(containerId) {
     xAxis: {
       type: 'value',
       splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-      axisLabel: { color: '#64748b', fontSize: 10 }
+      axisLabel: { color: '#64748b', fontSize: 12 }
     },
     yAxis: {
       type: 'category',
       data: regions.reverse(),
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 11 },
+      axisLabel: { color: '#94a3b8', fontSize: 12 },
       axisTick: { show: false }
     },
     series: [{
@@ -946,13 +947,13 @@ export function renderPriorityDist(containerId) {
       type: 'category',
       data: labels,
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 11 },
+      axisLabel: { color: '#94a3b8', fontSize: 12 },
       axisTick: { show: false }
     },
     yAxis: {
       type: 'value',
       splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-      axisLabel: { color: '#64748b', fontSize: 10 }
+      axisLabel: { color: '#64748b', fontSize: 12 }
     },
     series: [{
       type: 'bar',
@@ -1046,29 +1047,30 @@ export function renderIncidentTrend(containerId) {
   });
 
   const sorted = Object.entries(dateMap).sort((a, b) => a[0].localeCompare(b[0]));
+  const incidentCategories = sorted.map(s => s[0]);
 
   chart.setOption({
     tooltip: {
       trigger: 'axis',
       backgroundColor: 'rgba(17,24,39,0.95)',
       borderColor: 'rgba(255,255,255,0.08)',
-      textStyle: { color: '#f1f5f9', fontSize: 12 },
+      textStyle: { color: '#f1f5f9', fontSize: 13 },
       formatter: (params) => buildAxisTooltipHtmlWithDates(params)
     },
-    grid: { left: 50, right: 20, top: 20, bottom: 40 },
+    grid: { left: 52, right: 20, top: 24, bottom: 56 },
     xAxis: {
       type: 'category',
-      data: sorted.map(s => s[0]),
+      data: incidentCategories,
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#64748b', fontSize: 10, rotate: 30,
-        formatter: (v) => formatDisplayDateAxisFromCategory(v)
+      axisLabel: { color: '#64748b', fontSize: 12, rotate: 30,
+        formatter: (v, idx) => formatCategoryAxisDateLabel(v, idx, incidentCategories)
       },
       axisTick: { show: false }
     },
     yAxis: {
       type: 'value',
       splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-      axisLabel: { color: '#64748b', fontSize: 10 }
+      axisLabel: { color: '#64748b', fontSize: 12 }
     },
     series: [{
       type: 'bar',
@@ -1149,13 +1151,13 @@ export function renderIncidentCategory(containerId) {
     xAxis: {
       type: 'value',
       splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-      axisLabel: { color: '#64748b', fontSize: 10 }
+      axisLabel: { color: '#64748b', fontSize: 12 }
     },
     yAxis: {
       type: 'category',
       data: [...names].reverse(),
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 10, width: 160, overflow: 'truncate' },
+      axisLabel: { color: '#94a3b8', fontSize: 12, width: 160, overflow: 'truncate' },
       axisTick: { show: false }
     },
     series: [{
@@ -1285,15 +1287,15 @@ export function renderBranchPerformance(containerId) {
       type: 'category',
       data: sorted.map(s => s.name),
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 10, rotate: 40 },
+      axisLabel: { color: '#94a3b8', fontSize: 12, rotate: 40 },
       axisTick: { show: false }
     },
     yAxis: {
       type: 'value',
       name: 'Tasks',
-      nameTextStyle: { color: '#64748b', fontSize: 10 },
+      nameTextStyle: { color: '#64748b', fontSize: 12 },
       splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-      axisLabel: { color: '#64748b', fontSize: 10 }
+      axisLabel: { color: '#64748b', fontSize: 12 }
     },
     series: [
       {
@@ -1368,7 +1370,7 @@ export function renderBranchClosureRates(containerId) {
       type: 'category',
       data: sorted.map(s => s.name),
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 10, rotate: 40 },
+      axisLabel: { color: '#94a3b8', fontSize: 12, rotate: 40 },
       axisTick: { show: false }
     },
     yAxis: {
@@ -1376,7 +1378,7 @@ export function renderBranchClosureRates(containerId) {
       min: 0,
       max: 100,
       splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-      axisLabel: { color: '#64748b', fontSize: 10, formatter: '{value}%' }
+      axisLabel: { color: '#64748b', fontSize: 12, formatter: '{value}%' }
     },
     series: [
       {
@@ -1445,7 +1447,7 @@ export function renderBranchEfficiencyFromSheet(containerId) {
     },
     legend: {
       data: ['Efficiency', 'Efficiency (Working Day)'],
-      textStyle: { color: '#94a3b8', fontSize: 10 },
+      textStyle: { color: '#94a3b8', fontSize: 12 },
       top: 0
     },
     grid: { left: 70, right: 30, top: 52, bottom: 64 },
@@ -1453,7 +1455,7 @@ export function renderBranchEfficiencyFromSheet(containerId) {
       type: 'category',
       data: data.map(d => d.branch),
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 9, rotate: 28 },
+      axisLabel: { color: '#94a3b8', fontSize: 12, rotate: 28 },
       axisTick: { show: false }
     },
     yAxis: {
@@ -1461,7 +1463,7 @@ export function renderBranchEfficiencyFromSheet(containerId) {
       min: 0,
       max: yAxisMax,
       splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-      axisLabel: { color: '#64748b', formatter: (v) => `${Math.round(v * 100)}%` }
+      axisLabel: { color: '#64748b', fontSize: 12, formatter: (v) => `${Math.round(v * 100)}%` }
     },
     series: [
       {
@@ -1512,13 +1514,13 @@ export function renderBranchWorkloadFromSheet(containerId) {
     xAxis: {
       type: 'value',
       splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-      axisLabel: { color: '#64748b', fontSize: 10 }
+      axisLabel: { color: '#64748b', fontSize: 12 }
     },
     yAxis: {
       type: 'category',
       data: data.map(d => d.branch).reverse(),
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 10 },
+      axisLabel: { color: '#94a3b8', fontSize: 12 },
       axisTick: { show: false }
     },
     series: [{
@@ -1679,13 +1681,13 @@ export function renderSameDayClosure(containerId) {
       type: 'category',
       data: dayOrder,
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 11 },
+      axisLabel: { color: '#94a3b8', fontSize: 12 },
       axisTick: { show: false }
     },
     yAxis: {
       type: 'value',
       splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-      axisLabel: { color: '#64748b', fontSize: 10 }
+      axisLabel: { color: '#64748b', fontSize: 12 }
     },
     series: [
       {
@@ -1848,20 +1850,20 @@ export function renderBranchTasksVolume(containerId) {
         type: 'value',
         name: 'Tasks',
         position: 'bottom',
-        nameTextStyle: { color: '#64748b', fontSize: 10 },
+        nameTextStyle: { color: '#64748b', fontSize: 12 },
         splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-        axisLabel: { color: '#64748b', fontSize: 10 }
+        axisLabel: { color: '#64748b', fontSize: 12 }
       },
       {
         type: 'value',
         name: 'Avg days',
         position: 'top',
-        nameTextStyle: { color: '#64748b', fontSize: 10 },
+        nameTextStyle: { color: '#64748b', fontSize: 12 },
         max: maxAvg,
         splitLine: { show: false },
         axisLabel: {
           color: '#64748b',
-          fontSize: 10,
+          fontSize: 12,
           formatter: (v) => Number(v).toFixed(1)
         }
       }
@@ -1870,7 +1872,7 @@ export function renderBranchTasksVolume(containerId) {
       type: 'category',
       data: namesRev,
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 10, width: 130, overflow: 'truncate' },
+      axisLabel: { color: '#94a3b8', fontSize: 12, width: 130, overflow: 'truncate' },
       axisTick: { show: false }
     },
     series: [
