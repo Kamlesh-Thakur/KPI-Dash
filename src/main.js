@@ -26,7 +26,7 @@ import {
 import { createCalendarPicker } from './calendarPicker.js';
 import { mountCustomSelect, syncCustomSelect } from './customSelect.js';
 import { getCalendarSystem, setCalendarSystem } from './calendarPrefs.js';
-import { syncBsMonthHiddenFromGregorianYm } from './nepaliCalendarUi.js';
+import { syncBsMonthHiddenFromGregorianYm, getNepaliMonthlyFilterDefaults } from './nepaliCalendarUi.js';
 
 // ==========================================
 // STATE
@@ -263,14 +263,23 @@ function initDateFilters() {
   modeEl.value = 'monthly';
   anchorEl.value = todayText;
   weekEl.value = formatYmdLocal(getSundayOfWeek(today));
-  monthEl.value = monthYm;
-  syncBsMonthHiddenFromGregorianYm(monthYm);
   fromEl.value = todayText;
   toEl.value = todayText;
   setFilter('dateMode', modeEl.value);
-  setFilter('dateAnchor', monthStartText);
   setFilter('dateFrom', todayText);
   setFilter('dateTo', todayText);
+
+  const bsMonthHidden = document.getElementById('filter-bs-month');
+  if (getCalendarSystem() === 'nepali') {
+    const nep = getNepaliMonthlyFilterDefaults(today);
+    monthEl.value = nep.monthYYYYMM;
+    if (bsMonthHidden) bsMonthHidden.value = nep.bsMonthCode;
+    setFilter('dateAnchor', nep.dateAnchor);
+  } else {
+    monthEl.value = monthYm;
+    syncBsMonthHiddenFromGregorianYm(monthYm);
+    setFilter('dateAnchor', monthStartText);
+  }
 
   calendarPickerApi = createCalendarPicker({
     setFilter,
@@ -313,8 +322,16 @@ function initDateFilters() {
       weekEl.value = formatYmdLocal(sun);
       setFilter('dateAnchor', weekEl.value);
     } else if (mode === 'monthly') {
-      syncBsMonthHiddenFromGregorianYm(monthEl.value);
-      setFilter('dateAnchor', monthToDate(monthEl.value));
+      const bsMonthHidden = document.getElementById('filter-bs-month');
+      if (getCalendarSystem() === 'nepali') {
+        const nep = getNepaliMonthlyFilterDefaults(new Date());
+        monthEl.value = nep.monthYYYYMM;
+        if (bsMonthHidden) bsMonthHidden.value = nep.bsMonthCode;
+        setFilter('dateAnchor', nep.dateAnchor);
+      } else {
+        syncBsMonthHiddenFromGregorianYm(monthEl.value);
+        setFilter('dateAnchor', monthToDate(monthEl.value));
+      }
     } else if (mode === 'custom') {
       setFilter('dateFrom', fromEl.value);
       setFilter('dateTo', toEl.value);

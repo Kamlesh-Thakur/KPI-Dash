@@ -76,6 +76,22 @@ export function parseBsMonthCode(str) {
   return { bsYear, bsMonthIndex };
 }
 
+/**
+ * Same rule as choosing the current BS month in the Nepali month picker: map "today" (or any ref)
+ * to Gregorian YYYY-MM + first-of-month anchor for that BS month’s calendar start.
+ * Avoids mismatch where UI shows Chaitra but filters the wrong Gregorian month on first load.
+ */
+export function getNepaliMonthlyFilterDefaults(refDate) {
+  const nd = NepaliDate.fromAD(refDate);
+  const adFirst = new NepaliDate(nd.getYear(), nd.getMonth(), 1).toJsDate();
+  const ym = `${adFirst.getFullYear()}-${String(adFirst.getMonth() + 1).padStart(2, '0')}`;
+  return {
+    monthYYYYMM: ym,
+    bsMonthCode: formatBsMonthCode(nd.getYear(), nd.getMonth()),
+    dateAnchor: `${ym}-01`
+  };
+}
+
 /** Keep hidden BS month in sync when only Gregorian YYYY-MM is known (English picker / init). */
 export function syncBsMonthHiddenFromGregorianYm(monthYYYYMM) {
   const match = /^(\d{4})-(\d{2})$/.exec(String(monthYYYYMM || '').trim());
