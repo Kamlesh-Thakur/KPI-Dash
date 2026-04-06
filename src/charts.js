@@ -76,6 +76,53 @@ const COLORS = {
 
 const PALETTE = [COLORS.blue, COLORS.purple, COLORS.cyan, COLORS.green, COLORS.amber, COLORS.red, COLORS.pink, COLORS.indigo, COLORS.teal, COLORS.orange];
 
+/** Dashboard chart IDs → safe PNG filename stems (no extension). */
+const DASHBOARD_CHART_EXPORT_NAMES = {
+  'chart-tasks-trend': 'tasks-incidents-over-time',
+  'chart-task-type-pie': 'task-kpi-matrix',
+  'chart-type-resolution-targets': 'task-type-resolution-performance',
+  'chart-incident-category-dashboard': 'incident-categories',
+  'chart-incident-complexity-dashboard': 'incident-complexity',
+  'chart-priority-dist': 'task-priority-distribution',
+  'chart-branch-heatmap': 'branch-task-volume-avg-duration'
+};
+
+/** IDs that attach export in custom headers (not via getOrCreate). */
+const CHART_EXPORT_CUSTOM_ONLY_IDS = new Set(['chart-incident-category-dashboard', 'chart-branch-heatmap']);
+
+const CHART_EXPORT_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+
+/** Download a rendered ECharts instance as PNG (dashboard / any wired container). */
+export function downloadChartPng(containerId, fileBaseOverride) {
+  const chart = chartInstances[containerId];
+  if (!chart || typeof chart.getDataURL !== 'function') return;
+  const base =
+    fileBaseOverride ||
+    DASHBOARD_CHART_EXPORT_NAMES[containerId] ||
+    containerId.replace(/^chart-/, '').replace(/-/g, '_');
+  const isLight = typeof document !== 'undefined' && document.body.classList.contains('theme-light');
+  const bg = isLight ? '#ffffff' : '#111827';
+  const url = chart.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: bg });
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${base}.png`;
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function attachChartExportButton(containerId, fileBaseOverride) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'chart-export-btn';
+  btn.setAttribute('aria-label', 'Download chart as PNG');
+  btn.title = 'Download PNG';
+  btn.innerHTML = CHART_EXPORT_ICON_SVG;
+  btn.addEventListener('click', () => downloadChartPng(containerId, fileBaseOverride));
+  return btn;
+}
+
 function getOrCreate(containerId) {
   const el = document.getElementById(containerId);
   if (!el) return null;
@@ -83,10 +130,22 @@ function getOrCreate(containerId) {
   // Clear loader
   el.innerHTML = '';
 
-  // Add title + chart body
+  const showExport =
+    Object.prototype.hasOwnProperty.call(DASHBOARD_CHART_EXPORT_NAMES, containerId) &&
+    !CHART_EXPORT_CUSTOM_ONLY_IDS.has(containerId);
+
   const titleEl = document.createElement('div');
   titleEl.className = 'chart-title';
-  el.appendChild(titleEl);
+
+  if (showExport) {
+    const heading = document.createElement('div');
+    heading.className = 'chart-card-heading';
+    heading.appendChild(titleEl);
+    heading.appendChild(attachChartExportButton(containerId));
+    el.appendChild(heading);
+  } else {
+    el.appendChild(titleEl);
+  }
 
   const bodyEl = document.createElement('div');
   bodyEl.className = 'chart-body';
@@ -1127,15 +1186,22 @@ export function renderIncidentCategory(containerId) {
   header.className = 'chart-card-header';
   header.innerHTML = `
     <div class="chart-title"><span class="dot amber"></span>Incident Categories</div>
-    <div class="chart-card-toolbar">
-      <button type="button" class="chart-toggle-btn ${!showAll ? 'active' : ''}" data-mode="top">Top 10</button>
-      <button type="button" class="chart-toggle-btn ${showAll ? 'active' : ''}" data-mode="all">All categories</button>
+    <div class="chart-header-actions">
+      <div class="chart-card-toolbar">
+        <button type="button" class="chart-toggle-btn ${!showAll ? 'active' : ''}" data-mode="top">Top 10</button>
+        <button type="button" class="chart-toggle-btn ${showAll ? 'active' : ''}" data-mode="all">All categories</button>
+      </div>
     </div>
   `;
   const bodyEl = document.createElement('div');
   bodyEl.className = 'chart-body';
   el.appendChild(header);
   el.appendChild(bodyEl);
+
+  const actions = header.querySelector('.chart-header-actions');
+  if (actions && Object.prototype.hasOwnProperty.call(DASHBOARD_CHART_EXPORT_NAMES, containerId)) {
+    actions.appendChild(attachChartExportButton(containerId));
+  }
 
   header.querySelectorAll('.chart-toggle-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -1753,19 +1819,21 @@ export function renderBranchTasksVolume(containerId) {
   header.className = 'chart-card-header';
   header.innerHTML = `
     <div class="chart-title"><span class="dot cyan"></span>Branch Task Volume & Avg Duration</div>
-    <div class="chart-card-toolbar chart-card-toolbar--branch-controls">
-      <div class="chart-toolbar-category" role="group" aria-label="Branch list scope">
-        <span class="chart-toolbar-label">Branches</span>
-        <div class="chart-toolbar-category-buttons">
-          <button type="button" class="chart-toggle-btn ${!showAllBranches ? 'active' : ''}" data-branches="top">Top 15</button>
-          <button type="button" class="chart-toggle-btn ${showAllBranches ? 'active' : ''}" data-branches="all">All</button>
+    <div class="chart-header-actions">
+      <div class="chart-card-toolbar chart-card-toolbar--branch-controls">
+        <div class="chart-toolbar-category" role="group" aria-label="Branch list scope">
+          <span class="chart-toolbar-label">Branches</span>
+          <div class="chart-toolbar-category-buttons">
+            <button type="button" class="chart-toggle-btn ${!showAllBranches ? 'active' : ''}" data-branches="top">Top 15</button>
+            <button type="button" class="chart-toggle-btn ${showAllBranches ? 'active' : ''}" data-branches="all">All</button>
+          </div>
         </div>
-      </div>
-      <div class="chart-toolbar-category" role="group" aria-label="Task filter scope">
-        <span class="chart-toolbar-label">Scope</span>
-        <div class="chart-toolbar-category-buttons">
-          <button type="button" class="chart-toggle-btn ${!consideredOnly ? 'active' : ''}" data-scope="all">All tasks</button>
-          <button type="button" class="chart-toggle-btn ${consideredOnly ? 'active' : ''}" data-scope="considered">Considered</button>
+        <div class="chart-toolbar-category" role="group" aria-label="Task filter scope">
+          <span class="chart-toolbar-label">Scope</span>
+          <div class="chart-toolbar-category-buttons">
+            <button type="button" class="chart-toggle-btn ${!consideredOnly ? 'active' : ''}" data-scope="all">All tasks</button>
+            <button type="button" class="chart-toggle-btn ${consideredOnly ? 'active' : ''}" data-scope="considered">Considered</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1774,6 +1842,11 @@ export function renderBranchTasksVolume(containerId) {
   bodyEl.className = 'chart-body';
   el.appendChild(header);
   el.appendChild(bodyEl);
+
+  const branchActions = header.querySelector('.chart-header-actions');
+  if (branchActions && Object.prototype.hasOwnProperty.call(DASHBOARD_CHART_EXPORT_NAMES, containerId)) {
+    branchActions.appendChild(attachChartExportButton(containerId));
+  }
 
   header.querySelectorAll('[data-branches]').forEach((btn) => {
     btn.addEventListener('click', () => {

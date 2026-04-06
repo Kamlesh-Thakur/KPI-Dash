@@ -1737,6 +1737,57 @@ body.theme-light .compare-context-code {
   height: 280px;
 }
 
+/* Title row + PNG export (standard dashboard charts) */
+.chart-card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.chart-card-heading .chart-title {
+  margin-bottom: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.chart-card--dense .chart-card-heading {
+  margin-bottom: 8px;
+}
+
+.chart-export-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-primary);
+  background: var(--bg-glass);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.chart-export-btn:hover {
+  border-color: var(--border-active);
+  color: var(--text-primary);
+  background: var(--bg-card-hover);
+}
+
+/* Custom headers: toggles + export */
+.chart-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .chart-title {
   font-size: 0.95rem;
   font-weight: 600;
