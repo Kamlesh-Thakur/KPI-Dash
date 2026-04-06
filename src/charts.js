@@ -254,8 +254,8 @@ export function renderTaskTypePie(containerId) {
     grid: {
       left: 16,
       right: 16,
-      top: 52,
-      bottom: 72,
+      top: 32,
+      bottom: 8,
       containLabel: true
     },
     xAxis: {
@@ -267,7 +267,8 @@ export function renderTaskTypePie(containerId) {
         fontSize: 12,
         rotate: 0,
         interval: 0,
-        hideOverlap: false
+        hideOverlap: false,
+        margin: 12
       },
       axisTick: { show: false }
     },
@@ -288,7 +289,7 @@ export function renderTaskTypePie(containerId) {
       dimension: 2,
       orient: 'horizontal',
       left: 'center',
-      top: 16,
+      top: 0,
       calculable: false,
       inRange: {
         color: ['rgba(99,132,255,0.12)', 'rgba(99,132,255,0.95)']
@@ -420,9 +421,10 @@ export function renderTaskTypeResolutionTargets(containerId) {
     legend: {
       data: ['Total', 'Resolved <= 4h', 'Resolved <= 24h', 'Same Day Closed', 'Target Attainment %'],
       textStyle: { color: chartAxisLabelCat(), fontSize: 11 },
-      top: 0
+      top: 2,
+      itemGap: 8
     },
-    grid: { left: 60, right: 50, top: 36, bottom: 88 },
+    grid: { left: 60, right: 50, top: 42, bottom: 44 },
     xAxis: {
       type: 'category',
       data: labels,
