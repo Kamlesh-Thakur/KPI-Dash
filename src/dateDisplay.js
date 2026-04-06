@@ -3,6 +3,7 @@
  */
 import NepaliDate from 'nepali-date-converter';
 import { getCalendarSystem } from './calendarPrefs.js';
+import { chartTooltipHtmlColor } from './chartTheme.js';
 
 function categoryStringToLocalDate(v) {
   if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v.trim())) {
@@ -160,7 +161,8 @@ export function buildAxisTooltipHtmlWithDates(params) {
       const marker = p.marker || '';
       html += `${marker}${name}: ${p.value}<br/>`;
     });
-    return html.trim();
+    const c = chartTooltipHtmlColor();
+    return `<div style="color:${c}">${html.trim()}</div>`;
   } catch (e) {
     console.warn('[dateDisplay] buildAxisTooltipHtmlWithDates', e);
     return '';

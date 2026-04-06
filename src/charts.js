@@ -12,6 +12,16 @@ import {
   formatNumber
 } from './dataStore.js';
 import { formatCategoryAxisDateLabel, buildAxisTooltipHtmlWithDates } from './dateDisplay.js';
+import {
+  chartAxisLabelCat,
+  chartAxisLabelValue,
+  chartAxisLine,
+  chartSplitLine,
+  chartTooltipTheme,
+  chartHeatmapCellTextColor,
+  chartRadarSplitAreaColors,
+  chartRadarLineColor
+} from './chartTheme.js';
 
 const chartInstances = {};
 
@@ -135,30 +145,28 @@ export function renderTasksTrend(containerId) {
   chart.setOption({
     tooltip: {
       trigger: 'axis',
-      backgroundColor: 'rgba(17,24,39,0.95)',
-      borderColor: 'rgba(255,255,255,0.08)',
-      textStyle: { color: '#f1f5f9', fontSize: 13 },
+      ...chartTooltipTheme(13),
       formatter: (params) => buildAxisTooltipHtmlWithDates(params)
     },
     legend: {
       data: ['Tasks', 'Incidents'],
-      textStyle: { color: '#94a3b8', fontSize: 12 },
+      textStyle: { color: chartAxisLabelCat(), fontSize: 12 },
       top: 0
     },
     grid: { left: 52, right: 20, top: 24, bottom: 56 },
     xAxis: {
       type: 'category',
       data: allDates,
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#64748b', fontSize: 12, rotate: 30,
+      axisLine: { lineStyle: { color: chartAxisLine() } },
+      axisLabel: { color: chartAxisLabelValue(), fontSize: 12, rotate: 30,
         formatter: (v, idx) => formatCategoryAxisDateLabel(v, idx, allDates)
       },
       axisTick: { show: false }
     },
     yAxis: {
       type: 'value',
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-      axisLabel: { color: '#64748b', fontSize: 12 }
+      splitLine: { lineStyle: { color: chartSplitLine() } },
+      axisLabel: { color: chartAxisLabelValue(), fontSize: 12 }
     },
     series: [{
       name: 'Tasks',
@@ -227,28 +235,42 @@ export function renderTaskTypePie(containerId) {
   chart.setOption({
     tooltip: {
       position: 'top',
-      backgroundColor: 'rgba(17,24,39,0.95)',
-      borderColor: 'rgba(255,255,255,0.08)',
-      textStyle: { color: '#f1f5f9', fontSize: 13 },
+      ...chartTooltipTheme(13),
       formatter: (p) => {
         const row = rows[p.data[1]];
         const metric = metrics[p.data[0]];
         return `${row.task}<br/>${metric.label}: ${formatValue(p.data[3], p.data[4])}`;
       }
     },
-    grid: { left: 100, right: 20, top: 52, bottom: 68 },
+    grid: {
+      left: 16,
+      right: 16,
+      top: 52,
+      bottom: 72,
+      containLabel: true
+    },
     xAxis: {
       type: 'category',
       data: metrics.map(m => m.label),
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 12, rotate: 25 },
+      axisLine: { lineStyle: { color: chartAxisLine() } },
+      axisLabel: {
+        color: chartAxisLabelCat(),
+        fontSize: 12,
+        rotate: 0,
+        interval: 0,
+        hideOverlap: false
+      },
       axisTick: { show: false }
     },
     yAxis: {
       type: 'category',
       data: rows.map(r => r.task),
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 12, width: 130, overflow: 'truncate' },
+      axisLine: { lineStyle: { color: chartAxisLine() } },
+      axisLabel: {
+        color: chartAxisLabelCat(),
+        fontSize: 12,
+        lineHeight: 16
+      },
       axisTick: { show: false }
     },
     visualMap: {
@@ -262,14 +284,14 @@ export function renderTaskTypePie(containerId) {
       inRange: {
         color: ['rgba(99,132,255,0.12)', 'rgba(99,132,255,0.95)']
       },
-      textStyle: { color: '#94a3b8', fontSize: 12 }
+      textStyle: { color: chartAxisLabelCat(), fontSize: 12 }
     },
     series: [{
       type: 'heatmap',
       data: normalizedData,
       label: {
         show: true,
-        color: document.body.classList.contains('theme-light') ? '#0f172a' : '#f8fafc',
+        color: chartHeatmapCellTextColor(),
         fontSize: 12,
         fontWeight: 600,
         formatter: (p) => formatValue(p.data[3], p.data[4])
@@ -384,30 +406,28 @@ export function renderTaskTypeResolutionTargets(containerId) {
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
-      backgroundColor: 'rgba(17,24,39,0.95)',
-      borderColor: 'rgba(255,255,255,0.08)',
-      textStyle: { color: '#f1f5f9', fontSize: 12 }
+      ...chartTooltipTheme(12)
     },
     legend: {
       data: ['Total', 'Resolved <= 4h', 'Resolved <= 24h', 'Same Day Closed', 'Target Attainment %'],
-      textStyle: { color: '#94a3b8', fontSize: 11 },
+      textStyle: { color: chartAxisLabelCat(), fontSize: 11 },
       top: 0
     },
     grid: { left: 60, right: 50, top: 36, bottom: 50 },
     xAxis: {
       type: 'category',
       data: labels,
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 12, rotate: 30 },
+      axisLine: { lineStyle: { color: chartAxisLine() } },
+      axisLabel: { color: chartAxisLabelCat(), fontSize: 12, rotate: 30 },
       axisTick: { show: false }
     },
     yAxis: [
       {
         type: 'value',
         name: 'Count',
-        nameTextStyle: { color: '#64748b', fontSize: 12 },
-        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-        axisLabel: { color: '#64748b', fontSize: 12 }
+        nameTextStyle: { color: chartAxisLabelValue(), fontSize: 12 },
+        splitLine: { lineStyle: { color: chartSplitLine() } },
+        axisLabel: { color: chartAxisLabelValue(), fontSize: 12 }
       },
       {
         type: 'value',
@@ -415,7 +435,7 @@ export function renderTaskTypeResolutionTargets(containerId) {
         min: 0,
         max: 100,
         splitLine: { show: false },
-        axisLabel: { color: '#64748b', fontSize: 12, formatter: '{value}%' }
+        axisLabel: { color: chartAxisLabelValue(), fontSize: 12, formatter: '{value}%' }
       }
     ],
     series: [
@@ -533,22 +553,20 @@ export function renderRepeatedSupportWindow(containerId) {
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
-      backgroundColor: 'rgba(17,24,39,0.95)',
-      borderColor: 'rgba(255,255,255,0.08)',
-      textStyle: { color: '#f1f5f9', fontSize: 12 }
+      ...chartTooltipTheme(12)
     },
     grid: { left: 60, right: 20, top: 18, bottom: 40 },
     xAxis: {
       type: 'category',
       data: buckets.map(b => b.label),
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 12 },
+      axisLine: { lineStyle: { color: chartAxisLine() } },
+      axisLabel: { color: chartAxisLabelCat(), fontSize: 12 },
       axisTick: { show: false }
     },
     yAxis: {
       type: 'value',
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-      axisLabel: { color: '#64748b', fontSize: 12 }
+      splitLine: { lineStyle: { color: chartSplitLine() } },
+      axisLabel: { color: chartAxisLabelValue(), fontSize: 12 }
     },
     series: [{
       name: 'Repeated Support Count',
@@ -565,7 +583,7 @@ export function renderRepeatedSupportWindow(containerId) {
       label: {
         show: true,
         position: 'top',
-        color: '#94a3b8',
+        color: chartAxisLabelCat(),
         fontSize: 12
       }
     }],
@@ -591,22 +609,20 @@ export function renderImmediateSupportWindow(containerId) {
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
-      backgroundColor: 'rgba(17,24,39,0.95)',
-      borderColor: 'rgba(255,255,255,0.08)',
-      textStyle: { color: '#f1f5f9', fontSize: 12 }
+      ...chartTooltipTheme(12)
     },
     grid: { left: 60, right: 20, top: 18, bottom: 40 },
     xAxis: {
       type: 'category',
       data: buckets.map(b => b.label),
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 12 },
+      axisLine: { lineStyle: { color: chartAxisLine() } },
+      axisLabel: { color: chartAxisLabelCat(), fontSize: 12 },
       axisTick: { show: false }
     },
     yAxis: {
       type: 'value',
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-      axisLabel: { color: '#64748b', fontSize: 12 }
+      splitLine: { lineStyle: { color: chartSplitLine() } },
+      axisLabel: { color: chartAxisLabelValue(), fontSize: 12 }
     },
     series: [{
       name: 'Immediate Support Count',
@@ -623,7 +639,7 @@ export function renderImmediateSupportWindow(containerId) {
       label: {
         show: true,
         position: 'top',
-        color: '#94a3b8',
+        color: chartAxisLabelCat(),
         fontSize: 12
       }
     }],
@@ -654,26 +670,24 @@ function renderSupportBranchChart(chart, branches, seriesByWindow) {
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
-      backgroundColor: 'rgba(17,24,39,0.95)',
-      borderColor: 'rgba(255,255,255,0.08)',
-      textStyle: { color: '#f1f5f9', fontSize: 12 }
+      ...chartTooltipTheme(12)
     },
     legend: {
       data: ['Within 1 day', 'Within 3 days', 'Within 7 days', 'Within 30 days'],
-      textStyle: { color: '#94a3b8', fontSize: 12 },
+      textStyle: { color: chartAxisLabelCat(), fontSize: 12 },
       top: 0
     },
     grid: { left: 95, right: 20, top: 34, bottom: 24 },
     xAxis: {
       type: 'value',
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-      axisLabel: { color: '#64748b', fontSize: 12 }
+      splitLine: { lineStyle: { color: chartSplitLine() } },
+      axisLabel: { color: chartAxisLabelValue(), fontSize: 12 }
     },
     yAxis: {
       type: 'category',
       data: branches.reverse(),
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 12 },
+      axisLine: { lineStyle: { color: chartAxisLine() } },
+      axisLabel: { color: chartAxisLabelCat(), fontSize: 12 },
       axisTick: { show: false }
     },
     series: [
@@ -739,9 +753,7 @@ export function renderTeamTopScores(containerId) {
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
-      backgroundColor: 'rgba(17,24,39,0.95)',
-      borderColor: 'rgba(255,255,255,0.08)',
-      textStyle: { color: '#f1f5f9', fontSize: 12 },
+      ...chartTooltipTheme(12),
       formatter: (p) => {
         const d = top[p[0].dataIndex];
         return `${d.agent}<br/>Branch: ${d.branch}<br/>Score: ${(d.score * 100).toFixed(1)}%`;
@@ -752,14 +764,14 @@ export function renderTeamTopScores(containerId) {
       type: 'value',
       min: 0,
       max: 1,
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-      axisLabel: { color: '#64748b', formatter: (v) => `${Math.round(v * 100)}%` }
+      splitLine: { lineStyle: { color: chartSplitLine() } },
+      axisLabel: { color: chartAxisLabelValue(), formatter: (v) => `${Math.round(v * 100)}%` }
     },
     yAxis: {
       type: 'category',
       data: top.map(r => r.agent.split('[')[0].trim()).reverse(),
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 12, width: 260, overflow: 'truncate' },
+      axisLine: { lineStyle: { color: chartAxisLine() } },
+      axisLabel: { color: chartAxisLabelCat(), fontSize: 12, width: 260, overflow: 'truncate' },
       axisTick: { show: false }
     },
     series: [{
@@ -797,21 +809,21 @@ export function renderTeamPerformanceByBranch(containerId) {
     .slice(0, 12);
 
   chart.setOption({
-    tooltip: { trigger: 'axis', backgroundColor: 'rgba(17,24,39,0.95)', borderColor: 'rgba(255,255,255,0.08)', textStyle: { color: '#f1f5f9', fontSize: 12 } },
+    tooltip: { trigger: 'axis', ...chartTooltipTheme(12) },
     grid: { left: 50, right: 20, top: 20, bottom: 45 },
     xAxis: {
       type: 'category',
       data: rows.map(r => r.branch),
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 12, rotate: 30 },
+      axisLine: { lineStyle: { color: chartAxisLine() } },
+      axisLabel: { color: chartAxisLabelCat(), fontSize: 12, rotate: 30 },
       axisTick: { show: false }
     },
     yAxis: {
       type: 'value',
       min: 0,
       max: 1,
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-      axisLabel: { color: '#64748b', formatter: (v) => `${Math.round(v * 100)}%` }
+      splitLine: { lineStyle: { color: chartSplitLine() } },
+      axisLabel: { color: chartAxisLabelValue(), formatter: (v) => `${Math.round(v * 100)}%` }
     },
     series: [{
       name: 'Avg Score',
@@ -836,10 +848,10 @@ export function renderTeamOpsHealth(containerId) {
   const avgTaskHandled = avg(items.map(r => r.avgTasksHandled));
 
   chart.setOption({
-    tooltip: { trigger: 'item', backgroundColor: 'rgba(17,24,39,0.95)', borderColor: 'rgba(255,255,255,0.08)', textStyle: { color: '#f1f5f9', fontSize: 12 } },
+    tooltip: { trigger: 'item', ...chartTooltipTheme(12) },
     grid: { left: 40, right: 20, top: 20, bottom: 25 },
-    xAxis: { type: 'category', data: ['Working Days %', 'Task Handled %', 'Avg Tasks/Day'], axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } }, axisLabel: { color: '#94a3b8' }, axisTick: { show: false } },
-    yAxis: { type: 'value', splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }, axisLabel: { color: '#64748b' } },
+    xAxis: { type: 'category', data: ['Working Days %', 'Task Handled %', 'Avg Tasks/Day'], axisLine: { lineStyle: { color: chartAxisLine() } }, axisLabel: { color: chartAxisLabelCat() }, axisTick: { show: false } },
+    yAxis: { type: 'value', splitLine: { lineStyle: { color: chartSplitLine() } }, axisLabel: { color: chartAxisLabelValue() } },
     series: [{
       type: 'bar',
       data: [avgWorkingDays * 100, avgTaskHandledPct * 100, avgTaskHandled],
@@ -848,7 +860,7 @@ export function renderTeamOpsHealth(containerId) {
         color: (p) => [COLORS.amber, COLORS.orange, COLORS.blue][p.dataIndex],
         borderRadius: [6, 6, 0, 0]
       },
-      label: { show: true, position: 'top', color: '#94a3b8', formatter: (p) => (p.dataIndex < 2 ? `${p.value.toFixed(1)}%` : `${p.value.toFixed(1)}`) }
+      label: { show: true, position: 'top', color: chartAxisLabelCat(), formatter: (p) => (p.dataIndex < 2 ? `${p.value.toFixed(1)}%` : `${p.value.toFixed(1)}`) }
     }],
     animationDuration: 900
   });
@@ -885,21 +897,19 @@ export function renderRegionBar(containerId) {
   chart.setOption({
     tooltip: {
       trigger: 'axis',
-      backgroundColor: 'rgba(17,24,39,0.95)',
-      borderColor: 'rgba(255,255,255,0.08)',
-      textStyle: { color: '#f1f5f9', fontSize: 12 }
+      ...chartTooltipTheme(12)
     },
     grid: { left: 100, right: 30, top: 10, bottom: 20 },
     xAxis: {
       type: 'value',
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-      axisLabel: { color: '#64748b', fontSize: 12 }
+      splitLine: { lineStyle: { color: chartSplitLine() } },
+      axisLabel: { color: chartAxisLabelValue(), fontSize: 12 }
     },
     yAxis: {
       type: 'category',
       data: regions.reverse(),
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 12 },
+      axisLine: { lineStyle: { color: chartAxisLine() } },
+      axisLabel: { color: chartAxisLabelCat(), fontSize: 12 },
       axisTick: { show: false }
     },
     series: [{
@@ -938,22 +948,20 @@ export function renderPriorityDist(containerId) {
   chart.setOption({
     tooltip: {
       trigger: 'axis',
-      backgroundColor: 'rgba(17,24,39,0.95)',
-      borderColor: 'rgba(255,255,255,0.08)',
-      textStyle: { color: '#f1f5f9', fontSize: 12 }
+      ...chartTooltipTheme(12)
     },
     grid: { left: 50, right: 20, top: 10, bottom: 30 },
     xAxis: {
       type: 'category',
       data: labels,
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 12 },
+      axisLine: { lineStyle: { color: chartAxisLine() } },
+      axisLabel: { color: chartAxisLabelCat(), fontSize: 12 },
       axisTick: { show: false }
     },
     yAxis: {
       type: 'value',
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-      axisLabel: { color: '#64748b', fontSize: 12 }
+      splitLine: { lineStyle: { color: chartSplitLine() } },
+      axisLabel: { color: chartAxisLabelValue(), fontSize: 12 }
     },
     series: [{
       type: 'bar',
@@ -1010,7 +1018,7 @@ export function renderSLAGauge(containerId) {
       title: {
         offsetCenter: [0, '20%'],
         fontSize: 14,
-        color: '#94a3b8',
+        color: chartAxisLabelCat(),
         fontWeight: 500
       },
       detail: {
@@ -1052,25 +1060,23 @@ export function renderIncidentTrend(containerId) {
   chart.setOption({
     tooltip: {
       trigger: 'axis',
-      backgroundColor: 'rgba(17,24,39,0.95)',
-      borderColor: 'rgba(255,255,255,0.08)',
-      textStyle: { color: '#f1f5f9', fontSize: 13 },
+      ...chartTooltipTheme(13),
       formatter: (params) => buildAxisTooltipHtmlWithDates(params)
     },
     grid: { left: 52, right: 20, top: 24, bottom: 56 },
     xAxis: {
       type: 'category',
       data: incidentCategories,
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#64748b', fontSize: 12, rotate: 30,
+      axisLine: { lineStyle: { color: chartAxisLine() } },
+      axisLabel: { color: chartAxisLabelValue(), fontSize: 12, rotate: 30,
         formatter: (v, idx) => formatCategoryAxisDateLabel(v, idx, incidentCategories)
       },
       axisTick: { show: false }
     },
     yAxis: {
       type: 'value',
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-      axisLabel: { color: '#64748b', fontSize: 12 }
+      splitLine: { lineStyle: { color: chartSplitLine() } },
+      axisLabel: { color: chartAxisLabelValue(), fontSize: 12 }
     },
     series: [{
       type: 'bar',
@@ -1143,21 +1149,19 @@ export function renderIncidentCategory(containerId) {
   chart.setOption({
     tooltip: {
       trigger: 'axis',
-      backgroundColor: 'rgba(17,24,39,0.95)',
-      borderColor: 'rgba(255,255,255,0.08)',
-      textStyle: { color: '#f1f5f9', fontSize: 12 }
+      ...chartTooltipTheme(12)
     },
     grid: { left: 180, right: 30, top: 10, bottom: 20 },
     xAxis: {
       type: 'value',
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-      axisLabel: { color: '#64748b', fontSize: 12 }
+      splitLine: { lineStyle: { color: chartSplitLine() } },
+      axisLabel: { color: chartAxisLabelValue(), fontSize: 12 }
     },
     yAxis: {
       type: 'category',
       data: [...names].reverse(),
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 12, width: 160, overflow: 'truncate' },
+      axisLine: { lineStyle: { color: chartAxisLine() } },
+      axisLabel: { color: chartAxisLabelCat(), fontSize: 12, width: 160, overflow: 'truncate' },
       axisTick: { show: false }
     },
     series: [{
@@ -1194,9 +1198,7 @@ export function renderIncidentComplexity(containerId) {
   chart.setOption({
     tooltip: {
       trigger: 'item',
-      backgroundColor: 'rgba(17,24,39,0.95)',
-      borderColor: 'rgba(255,255,255,0.08)',
-      textStyle: { color: '#f1f5f9', fontSize: 12 },
+      ...chartTooltipTheme(12),
       formatter: '{b}: {c} ({d}%)'
     },
     color: [COLORS.green, COLORS.amber, COLORS.red, COLORS.purple, COLORS.blue],
@@ -1206,7 +1208,7 @@ export function renderIncidentComplexity(containerId) {
       center: ['50%', '50%'],
       itemStyle: { borderRadius: 6, borderColor: 'rgba(10,14,26,0.8)', borderWidth: 2 },
       label: {
-        color: '#94a3b8',
+        color: chartAxisLabelCat(),
         fontSize: 11,
         formatter: '{b}\n{d}%'
       },
@@ -1232,9 +1234,7 @@ export function renderIncidentClosure(containerId) {
   chart.setOption({
     tooltip: {
       trigger: 'item',
-      backgroundColor: 'rgba(17,24,39,0.95)',
-      borderColor: 'rgba(255,255,255,0.08)',
-      textStyle: { color: '#f1f5f9', fontSize: 12 },
+      ...chartTooltipTheme(12),
       formatter: '{b}: {c} ({d}%)'
     },
     color: [COLORS.green, COLORS.red, COLORS.blue],
@@ -1244,7 +1244,7 @@ export function renderIncidentClosure(containerId) {
       center: ['50%', '50%'],
       itemStyle: { borderRadius: 6, borderColor: 'rgba(10,14,26,0.8)', borderWidth: 2 },
       label: {
-        color: '#94a3b8',
+        color: chartAxisLabelCat(),
         fontSize: 11,
         formatter: '{b}\n{c}'
       },
@@ -1272,30 +1272,28 @@ export function renderBranchPerformance(containerId) {
   chart.setOption({
     tooltip: {
       trigger: 'axis',
-      backgroundColor: 'rgba(17,24,39,0.95)',
-      borderColor: 'rgba(255,255,255,0.08)',
-      textStyle: { color: '#f1f5f9', fontSize: 12 },
+      ...chartTooltipTheme(12),
       axisPointer: { type: 'shadow' }
     },
     legend: {
       data: ['Tasks', 'Same Day (count)', 'Closed <= 4h', 'Closed <= 24h'],
-      textStyle: { color: '#94a3b8', fontSize: 11 },
+      textStyle: { color: chartAxisLabelCat(), fontSize: 11 },
       top: 0
     },
     grid: { left: 70, right: 30, top: 35, bottom: 40 },
     xAxis: {
       type: 'category',
       data: sorted.map(s => s.name),
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 12, rotate: 40 },
+      axisLine: { lineStyle: { color: chartAxisLine() } },
+      axisLabel: { color: chartAxisLabelCat(), fontSize: 12, rotate: 40 },
       axisTick: { show: false }
     },
     yAxis: {
       type: 'value',
       name: 'Tasks',
-      nameTextStyle: { color: '#64748b', fontSize: 12 },
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-      axisLabel: { color: '#64748b', fontSize: 12 }
+      nameTextStyle: { color: chartAxisLabelValue(), fontSize: 12 },
+      splitLine: { lineStyle: { color: chartSplitLine() } },
+      axisLabel: { color: chartAxisLabelValue(), fontSize: 12 }
     },
     series: [
       {
@@ -1356,29 +1354,27 @@ export function renderBranchClosureRates(containerId) {
   chart.setOption({
     tooltip: {
       trigger: 'axis',
-      backgroundColor: 'rgba(17,24,39,0.95)',
-      borderColor: 'rgba(255,255,255,0.08)',
-      textStyle: { color: '#f1f5f9', fontSize: 12 }
+      ...chartTooltipTheme(12)
     },
     legend: {
       data: ['Same Day %', 'Closed <= 4h %', 'Closed <= 24h %'],
-      textStyle: { color: '#94a3b8', fontSize: 11 },
+      textStyle: { color: chartAxisLabelCat(), fontSize: 11 },
       top: 0
     },
     grid: { left: 70, right: 30, top: 35, bottom: 40 },
     xAxis: {
       type: 'category',
       data: sorted.map(s => s.name),
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 12, rotate: 40 },
+      axisLine: { lineStyle: { color: chartAxisLine() } },
+      axisLabel: { color: chartAxisLabelCat(), fontSize: 12, rotate: 40 },
       axisTick: { show: false }
     },
     yAxis: {
       type: 'value',
       min: 0,
       max: 100,
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-      axisLabel: { color: '#64748b', fontSize: 12, formatter: '{value}%' }
+      splitLine: { lineStyle: { color: chartSplitLine() } },
+      axisLabel: { color: chartAxisLabelValue(), fontSize: 12, formatter: '{value}%' }
     },
     series: [
       {
@@ -1436,9 +1432,7 @@ export function renderBranchEfficiencyFromSheet(containerId) {
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
-      backgroundColor: 'rgba(17,24,39,0.95)',
-      borderColor: 'rgba(255,255,255,0.08)',
-      textStyle: { color: '#f1f5f9', fontSize: 12 },
+      ...chartTooltipTheme(12),
       formatter: (p) => {
         const first = p[0];
         const second = p[1];
@@ -1447,23 +1441,23 @@ export function renderBranchEfficiencyFromSheet(containerId) {
     },
     legend: {
       data: ['Efficiency', 'Efficiency (Working Day)'],
-      textStyle: { color: '#94a3b8', fontSize: 12 },
+      textStyle: { color: chartAxisLabelCat(), fontSize: 12 },
       top: 0
     },
     grid: { left: 70, right: 30, top: 52, bottom: 64 },
     xAxis: {
       type: 'category',
       data: data.map(d => d.branch),
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 12, rotate: 28 },
+      axisLine: { lineStyle: { color: chartAxisLine() } },
+      axisLabel: { color: chartAxisLabelCat(), fontSize: 12, rotate: 28 },
       axisTick: { show: false }
     },
     yAxis: {
       type: 'value',
       min: 0,
       max: yAxisMax,
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-      axisLabel: { color: '#64748b', fontSize: 12, formatter: (v) => `${Math.round(v * 100)}%` }
+      splitLine: { lineStyle: { color: chartSplitLine() } },
+      axisLabel: { color: chartAxisLabelValue(), fontSize: 12, formatter: (v) => `${Math.round(v * 100)}%` }
     },
     series: [
       {
@@ -1506,21 +1500,19 @@ export function renderBranchWorkloadFromSheet(containerId) {
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
-      backgroundColor: 'rgba(17,24,39,0.95)',
-      borderColor: 'rgba(255,255,255,0.08)',
-      textStyle: { color: '#f1f5f9', fontSize: 12 }
+      ...chartTooltipTheme(12)
     },
     grid: { left: 100, right: 20, top: 16, bottom: 24 },
     xAxis: {
       type: 'value',
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-      axisLabel: { color: '#64748b', fontSize: 12 }
+      splitLine: { lineStyle: { color: chartSplitLine() } },
+      axisLabel: { color: chartAxisLabelValue(), fontSize: 12 }
     },
     yAxis: {
       type: 'category',
       data: data.map(d => d.branch).reverse(),
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 12 },
+      axisLine: { lineStyle: { color: chartAxisLine() } },
+      axisLabel: { color: chartAxisLabelCat(), fontSize: 12 },
       axisTick: { show: false }
     },
     series: [{
@@ -1590,23 +1582,21 @@ export function renderDivisionCompare(containerId) {
 
   chart.setOption({
     tooltip: {
-      backgroundColor: 'rgba(17,24,39,0.95)',
-      borderColor: 'rgba(255,255,255,0.08)',
-      textStyle: { color: '#f1f5f9', fontSize: 12 }
+      ...chartTooltipTheme(12)
     },
     color: [COLORS.blue, COLORS.green],
     legend: {
       data: ['Total Tasks', 'Same Day Closed'],
-      textStyle: { color: '#94a3b8', fontSize: 11 },
+      textStyle: { color: chartAxisLabelCat(), fontSize: 11 },
       bottom: 0
     },
     radar: {
       indicator,
       shape: 'polygon',
-      axisName: { color: '#94a3b8', fontSize: 11 },
-      splitArea: { areaStyle: { color: ['rgba(255,255,255,0.02)', 'rgba(255,255,255,0.04)'] } },
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.06)' } },
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.06)' } }
+      axisName: { color: chartAxisLabelCat(), fontSize: 11 },
+      splitArea: { areaStyle: { color: chartRadarSplitAreaColors() } },
+      splitLine: { lineStyle: { color: chartRadarLineColor() } },
+      axisLine: { lineStyle: { color: chartRadarLineColor() } }
     },
     series: [{
       type: 'radar',
@@ -1666,28 +1656,26 @@ export function renderSameDayClosure(containerId) {
   chart.setOption({
     tooltip: {
       trigger: 'axis',
-      backgroundColor: 'rgba(17,24,39,0.95)',
-      borderColor: 'rgba(255,255,255,0.08)',
-      textStyle: { color: '#f1f5f9', fontSize: 12 },
+      ...chartTooltipTheme(12),
       axisPointer: { type: 'shadow' }
     },
     legend: {
       data: ['Open (start)', 'New', 'Same Day Closure', 'Open (next day)'],
-      textStyle: { color: '#94a3b8', fontSize: 11 },
+      textStyle: { color: chartAxisLabelCat(), fontSize: 11 },
       top: 0
     },
     grid: { left: 50, right: 20, top: 35, bottom: 48 },
     xAxis: {
       type: 'category',
       data: dayOrder,
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 12 },
+      axisLine: { lineStyle: { color: chartAxisLine() } },
+      axisLabel: { color: chartAxisLabelCat(), fontSize: 12 },
       axisTick: { show: false }
     },
     yAxis: {
       type: 'value',
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-      axisLabel: { color: '#64748b', fontSize: 12 }
+      splitLine: { lineStyle: { color: chartSplitLine() } },
+      axisLabel: { color: chartAxisLabelValue(), fontSize: 12 }
     },
     series: [
       {
@@ -1809,7 +1797,7 @@ export function renderBranchTasksVolume(containerId) {
         text: consideredOnly ? 'No Considered tasks in this period' : 'No task data for branches',
         left: 'center',
         top: 'center',
-        textStyle: { color: '#94a3b8', fontSize: 14, fontWeight: 500 }
+        textStyle: { color: chartAxisLabelCat(), fontSize: 14, fontWeight: 500 }
       },
       xAxis: { show: false },
       yAxis: { show: false },
@@ -1827,9 +1815,7 @@ export function renderBranchTasksVolume(containerId) {
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
-      backgroundColor: 'rgba(17,24,39,0.95)',
-      borderColor: 'rgba(255,255,255,0.08)',
-      textStyle: { color: '#f1f5f9', fontSize: 12 },
+      ...chartTooltipTheme(12),
       formatter: (params) => {
         if (!params?.length) return '';
         const branch = params[0].name;
@@ -1841,7 +1827,7 @@ export function renderBranchTasksVolume(containerId) {
     },
     legend: {
       data: ['Task volume', 'Avg duration'],
-      textStyle: { color: '#94a3b8', fontSize: 11 },
+      textStyle: { color: chartAxisLabelCat(), fontSize: 11 },
       top: 0
     },
     grid: { left: '14%', right: '10%', top: 44, bottom: 32 },
@@ -1850,19 +1836,19 @@ export function renderBranchTasksVolume(containerId) {
         type: 'value',
         name: 'Tasks',
         position: 'bottom',
-        nameTextStyle: { color: '#64748b', fontSize: 12 },
-        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-        axisLabel: { color: '#64748b', fontSize: 12 }
+        nameTextStyle: { color: chartAxisLabelValue(), fontSize: 12 },
+        splitLine: { lineStyle: { color: chartSplitLine() } },
+        axisLabel: { color: chartAxisLabelValue(), fontSize: 12 }
       },
       {
         type: 'value',
         name: 'Avg days',
         position: 'top',
-        nameTextStyle: { color: '#64748b', fontSize: 12 },
+        nameTextStyle: { color: chartAxisLabelValue(), fontSize: 12 },
         max: maxAvg,
         splitLine: { show: false },
         axisLabel: {
-          color: '#64748b',
+          color: chartAxisLabelValue(),
           fontSize: 12,
           formatter: (v) => Number(v).toFixed(1)
         }
@@ -1871,8 +1857,8 @@ export function renderBranchTasksVolume(containerId) {
     yAxis: {
       type: 'category',
       data: namesRev,
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#94a3b8', fontSize: 12, width: 130, overflow: 'truncate' },
+      axisLine: { lineStyle: { color: chartAxisLine() } },
+      axisLabel: { color: chartAxisLabelCat(), fontSize: 12, width: 130, overflow: 'truncate' },
       axisTick: { show: false }
     },
     series: [
