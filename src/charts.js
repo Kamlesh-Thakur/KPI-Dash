@@ -1118,6 +1118,10 @@ export function renderIncidentCategory(containerId) {
   if (incidentCategoryShowAll[containerId] === undefined) incidentCategoryShowAll[containerId] = false;
   const showAll = incidentCategoryShowAll[containerId];
 
+  // Drop inline sizes from switching "All categories" → "Top 10" (min-height alone may not shrink).
+  el.style.removeProperty('min-height');
+  el.style.removeProperty('height');
+
   el.innerHTML = '';
   const header = document.createElement('div');
   header.className = 'chart-card-header';
@@ -1140,13 +1144,6 @@ export function renderIncidentCategory(containerId) {
     });
   });
 
-  if (chartInstances[containerId]) {
-    chartInstances[containerId].dispose();
-    delete chartInstances[containerId];
-  }
-  const chart = echarts.init(bodyEl, null, { renderer: 'canvas' });
-  chartInstances[containerId] = chart;
-
   const data = getFilteredIncidentData();
   const catMap = {};
   data.forEach((r) => {
@@ -1161,8 +1158,18 @@ export function renderIncidentCategory(containerId) {
   const n = Math.max(names.length, 1);
   const barH = Math.min(26, Math.max(14, 340 / n));
   const bodyMinH = Math.max(280, n * barH + 72);
+  // Fixed height overrides global .chart-body { height: calc(100% - 40px) }, which can block shrinking.
   bodyEl.style.minHeight = `${bodyMinH}px`;
+  bodyEl.style.height = `${bodyMinH}px`;
+  // Header row + card vertical padding (~20px × 2) — keep card from staying tall after "All".
   el.style.minHeight = `${bodyMinH + 100}px`;
+
+  if (chartInstances[containerId]) {
+    chartInstances[containerId].dispose();
+    delete chartInstances[containerId];
+  }
+  const chart = echarts.init(bodyEl, null, { renderer: 'canvas' });
+  chartInstances[containerId] = chart;
 
   chart.setOption({
     tooltip: {
@@ -1197,6 +1204,9 @@ export function renderIncidentCategory(containerId) {
     animationDuration: 1000
   });
   chart.resize();
+  requestAnimationFrame(() => {
+    chart.resize();
+  });
 }
 
 export function renderIncidentComplexity(containerId) {
