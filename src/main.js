@@ -25,6 +25,8 @@ import {
 } from './charts.js';
 import { createCalendarPicker } from './calendarPicker.js';
 import { mountCustomSelect, syncCustomSelect } from './customSelect.js';
+import { getCalendarSystem, setCalendarSystem } from './calendarPrefs.js';
+import { syncBsMonthHiddenFromGregorianYm } from './nepaliCalendarUi.js';
 
 // ==========================================
 // STATE
@@ -52,6 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initNavigation();
   initFilters();
   initDateFilters();
+  initCalendarSystemToggle();
   mountFilterCustomSelects();
   populateFilters();
   initUpload();
@@ -164,6 +167,27 @@ function switchTab(tab) {
 // ==========================================
 // FILTERS
 // ==========================================
+function initCalendarSystemToggle() {
+  const en = document.getElementById('calendar-system-en');
+  const ne = document.getElementById('calendar-system-ne');
+  const sync = () => {
+    const sys = getCalendarSystem();
+    en?.classList.toggle('is-active', sys === 'english');
+    ne?.classList.toggle('is-active', sys === 'nepali');
+  };
+  sync();
+  en?.addEventListener('click', () => {
+    setCalendarSystem('english');
+    sync();
+    calendarPickerApi?.refreshCalendarDisplay?.();
+  });
+  ne?.addEventListener('click', () => {
+    setCalendarSystem('nepali');
+    sync();
+    calendarPickerApi?.refreshCalendarDisplay?.();
+  });
+}
+
 function mountFilterCustomSelects() {
   ['filter-date-mode', 'filter-by-dimension', 'filter-by-value'].forEach((id) => {
     const el = document.getElementById(id);
@@ -240,6 +264,7 @@ function initDateFilters() {
   anchorEl.value = todayText;
   weekEl.value = formatYmdLocal(getSundayOfWeek(today));
   monthEl.value = monthYm;
+  syncBsMonthHiddenFromGregorianYm(monthYm);
   fromEl.value = todayText;
   toEl.value = todayText;
   setFilter('dateMode', modeEl.value);
@@ -288,6 +313,7 @@ function initDateFilters() {
       weekEl.value = formatYmdLocal(sun);
       setFilter('dateAnchor', weekEl.value);
     } else if (mode === 'monthly') {
+      syncBsMonthHiddenFromGregorianYm(monthEl.value);
       setFilter('dateAnchor', monthToDate(monthEl.value));
     } else if (mode === 'custom') {
       setFilter('dateFrom', fromEl.value);

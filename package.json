@@ -12,8 +12,9 @@
     "vite": "^6.0.0"
   },
   "dependencies": {
-    "xlsx": "^0.18.5",
+    "ag-grid-community": "^32.0.0",
     "echarts": "^5.5.0",
-    "ag-grid-community": "^32.0.0"
+    "nepali-date-converter": "^3.4.0",
+    "xlsx": "^0.18.5"
   }
 }

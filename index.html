@@ -103,6 +103,10 @@
             <option value="monthly">Monthly</option>
             <option value="custom">Custom Range</option>
           </select>
+          <div class="calendar-system-toggle" role="group" aria-label="Calendar display">
+            <button type="button" class="calendar-system-btn" id="calendar-system-en" title="Gregorian calendar">English</button>
+            <button type="button" class="calendar-system-btn" id="calendar-system-ne" title="Bikram Sambat">नेपाली</button>
+          </div>
           <input type="hidden" id="filter-date-anchor" value="" />
           <div class="calendar-filter-wrap" id="daily-filter-wrap">
             <div class="week-picker-shell">
@@ -124,6 +128,7 @@
             </div>
           </div>
           <input type="hidden" id="filter-date-month" value="" />
+          <input type="hidden" id="filter-bs-month" value="" aria-hidden="true" />
           <div class="calendar-filter-wrap" id="month-filter-wrap">
             <div class="week-picker-shell">
               <button type="button" class="week-picker-trigger" id="month-picker-trigger" aria-expanded="false" aria-haspopup="dialog" aria-controls="shared-calendar-popover" title="Select month">
