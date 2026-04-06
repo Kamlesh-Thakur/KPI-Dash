@@ -10,8 +10,9 @@ import {
   loadData, loadTeamPerformanceData, getFilteredRawData, getFilteredIncidentData,
   getFilteredRawDataForRange, getFilteredIncidentDataForRange, getDateFilterRange,
   setFilter, getUniqueValues, formatNumber,
-  excelDateToJS, formatDate, formatDuration, getState
+  excelDateToJS, formatDuration, getState
 } from './dataStore.js';
+import { formatDisplayDate, formatDisplayDateRange } from './dateDisplay.js';
 import {
   renderTasksTrend, renderTaskTypePie,
   renderPriorityDist, renderTaskTypeResolutionTargets,
@@ -60,6 +61,13 @@ document.addEventListener('DOMContentLoaded', () => {
   initUpload();
   initExport();
   initMenuToggle();
+
+  // Paint KPI + charts immediately so chart loaders clear even if Excel fetch fails or errors later
+  try {
+    renderAll();
+  } catch (e) {
+    console.error('[init] renderAll failed', e);
+  }
 
   // Auto-load the Excel file
   autoLoadExcel();
@@ -112,7 +120,12 @@ function processExcelBuffer(buf) {
 
   dataLoaded = true;
   populateFilters();
-  renderAll();
+  try {
+    renderAll();
+  } catch (e) {
+    console.error('[processExcelBuffer] renderAll failed', e);
+    showToast('Dashboard render error — check console', 'info');
+  }
   // Ensure charts pick up final layout sizes after first render
   setTimeout(() => resizeCharts(), 50);
   setTimeout(() => resizeCharts(), 250);
@@ -180,11 +193,17 @@ function initCalendarSystemToggle() {
     setCalendarSystem('english');
     sync();
     calendarPickerApi?.refreshCalendarDisplay?.();
+    renderAll();
+    tasksGridApi?.refreshCells?.({ force: true });
+    incidentsGridApi?.refreshCells?.({ force: true });
   });
   ne?.addEventListener('click', () => {
     setCalendarSystem('nepali');
     sync();
     calendarPickerApi?.refreshCalendarDisplay?.();
+    renderAll();
+    tasksGridApi?.refreshCells?.({ force: true });
+    incidentsGridApi?.refreshCells?.({ force: true });
   });
 }
 
@@ -688,7 +707,7 @@ function initCompareDetails() {
 function getCompareContextSummaryShort() {
   const win = getComparisonWindowDates();
   if (!win) return 'Comparison: pick a date filter to compare current, prior, and last year.';
-  const cur = formatRangeShort(win.thisStart, win.thisEnd);
+  const cur = formatDisplayDateRange(win.thisStart, win.thisEnd);
   return `Current: ${cur}. Click or hover for full comparison windows.`;
 }
 
@@ -1122,9 +1141,9 @@ function buildComparisonContextLabel() {
     return '<p class="compare-context-muted">Choose a date filter so comparisons can use a current window, a prior window, and last year.</p>';
   }
   const { thisStart, thisEnd, prevStart, prevEnd, yoyStart, yoyEnd } = win;
-  const cur = formatRangeShort(thisStart, thisEnd);
-  const prev = formatRangeShort(prevStart, prevEnd);
-  const yoy = formatRangeShort(yoyStart, yoyEnd);
+  const cur = formatDisplayDateRange(thisStart, thisEnd);
+  const prev = formatDisplayDateRange(prevStart, prevEnd);
+  const yoy = formatDisplayDateRange(yoyStart, yoyEnd);
   const headline = getCompareModeHeadline();
 
   return `
@@ -1138,14 +1157,6 @@ function buildComparisonContextLabel() {
       <p class="compare-context-hint">Percent changes on each card match the two chips (${L.prevCode} and ${L.yoyCode}). Hover a chip for a full explanation.</p>
     </div>
   `;
-}
-
-function formatRangeShort(start, end) {
-  const opts = { month: 'short', day: 'numeric', year: 'numeric' };
-  const s = start.toLocaleDateString('en-US', opts);
-  const e = end.toLocaleDateString('en-US', opts);
-  if (start.getTime() === end.getTime()) return s;
-  return `${s} - ${e}`;
 }
 
 function renderIncidentKPICards() {
@@ -1221,13 +1232,13 @@ function renderTasksGrid() {
     { field: 'Customer Category', width: 130 },
     { field: 'Task Field Agent', width: 150 },
     { field: 'Task Created', width: 120,
-      valueFormatter: p => formatDate(excelDateToJS(p.value))
+      valueFormatter: p => formatDisplayDate(excelDateToJS(p.value))
     },
     { field: 'Task Assigned', width: 120,
-      valueFormatter: p => formatDate(excelDateToJS(p.value))
+      valueFormatter: p => formatDisplayDate(excelDateToJS(p.value))
     },
     { field: 'Task Completed', width: 120,
-      valueFormatter: p => formatDate(excelDateToJS(p.value))
+      valueFormatter: p => formatDisplayDate(excelDateToJS(p.value))
     },
     { field: 'Service Days', width: 100 },
     { field: 'Duration', width: 100,

@@ -8,10 +8,10 @@ import {
   getBranchEfficiencyData,
   getTeamPerformanceData,
   excelDateToJS,
-  formatDateShort,
   formatDuration,
   formatNumber
 } from './dataStore.js';
+import { formatDisplayDateAxisFromCategory, buildAxisTooltipHtmlWithDates } from './dateDisplay.js';
 
 const chartInstances = {};
 
@@ -137,7 +137,8 @@ export function renderTasksTrend(containerId) {
       trigger: 'axis',
       backgroundColor: 'rgba(17,24,39,0.95)',
       borderColor: 'rgba(255,255,255,0.08)',
-      textStyle: { color: '#f1f5f9', fontSize: 12 }
+      textStyle: { color: '#f1f5f9', fontSize: 12 },
+      formatter: (params) => buildAxisTooltipHtmlWithDates(params)
     },
     legend: {
       data: ['Tasks', 'Incidents'],
@@ -150,7 +151,7 @@ export function renderTasksTrend(containerId) {
       data: allDates,
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
       axisLabel: { color: '#64748b', fontSize: 10, rotate: 30,
-        formatter: v => { const d = new Date(v); return formatDateShort(d); }
+        formatter: (v) => formatDisplayDateAxisFromCategory(v)
       },
       axisTick: { show: false }
     },
@@ -1051,7 +1052,8 @@ export function renderIncidentTrend(containerId) {
       trigger: 'axis',
       backgroundColor: 'rgba(17,24,39,0.95)',
       borderColor: 'rgba(255,255,255,0.08)',
-      textStyle: { color: '#f1f5f9', fontSize: 12 }
+      textStyle: { color: '#f1f5f9', fontSize: 12 },
+      formatter: (params) => buildAxisTooltipHtmlWithDates(params)
     },
     grid: { left: 50, right: 20, top: 20, bottom: 40 },
     xAxis: {
@@ -1059,7 +1061,7 @@ export function renderIncidentTrend(containerId) {
       data: sorted.map(s => s[0]),
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
       axisLabel: { color: '#64748b', fontSize: 10, rotate: 30,
-        formatter: v => formatDateShort(new Date(v))
+        formatter: (v) => formatDisplayDateAxisFromCategory(v)
       },
       axisTick: { show: false }
     },
