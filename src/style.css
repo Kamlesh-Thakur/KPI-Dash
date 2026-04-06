@@ -1789,11 +1789,51 @@ body.theme-light .compare-context-code {
   max-width: 100%;
 }
 
+/* Branch Task Volume: one horizontal row of [Branches …] [Scope …] */
+.chart-card-toolbar--branch-controls {
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+}
+
+@media (max-width: 900px) {
+  .chart-card-toolbar--branch-controls {
+    flex-wrap: wrap;
+  }
+}
+
 .chart-toolbar-group {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
+}
+
+/* Grouped toolbar blocks (e.g. Branches vs Scope on Branch Task Volume) */
+.chart-toolbar-category {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-glass);
+  border: 1px solid var(--border-primary);
+}
+
+.chart-toolbar-category .chart-toolbar-label {
+  margin-right: 0;
+  flex-shrink: 0;
+}
+
+.chart-toolbar-category-buttons {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
 }
 
 .chart-toolbar-label {

@@ -1745,21 +1745,28 @@ export function renderBranchTasksVolume(containerId) {
   const state = getBranchVolumeState(containerId);
   const { showAllBranches, consideredOnly } = state;
 
+  el.style.removeProperty('min-height');
+  el.style.removeProperty('height');
+
   el.innerHTML = '';
   const header = document.createElement('div');
   header.className = 'chart-card-header';
   header.innerHTML = `
     <div class="chart-title"><span class="dot cyan"></span>Branch Task Volume & Avg Duration</div>
-    <div class="chart-card-toolbar chart-card-toolbar--wrap">
-      <div class="chart-toolbar-group">
+    <div class="chart-card-toolbar chart-card-toolbar--branch-controls">
+      <div class="chart-toolbar-category" role="group" aria-label="Branch list scope">
         <span class="chart-toolbar-label">Branches</span>
-        <button type="button" class="chart-toggle-btn ${!showAllBranches ? 'active' : ''}" data-branches="top">Top 15</button>
-        <button type="button" class="chart-toggle-btn ${showAllBranches ? 'active' : ''}" data-branches="all">All</button>
+        <div class="chart-toolbar-category-buttons">
+          <button type="button" class="chart-toggle-btn ${!showAllBranches ? 'active' : ''}" data-branches="top">Top 15</button>
+          <button type="button" class="chart-toggle-btn ${showAllBranches ? 'active' : ''}" data-branches="all">All</button>
+        </div>
       </div>
-      <div class="chart-toolbar-group">
+      <div class="chart-toolbar-category" role="group" aria-label="Task filter scope">
         <span class="chart-toolbar-label">Scope</span>
-        <button type="button" class="chart-toggle-btn ${!consideredOnly ? 'active' : ''}" data-scope="all">All tasks</button>
-        <button type="button" class="chart-toggle-btn ${consideredOnly ? 'active' : ''}" data-scope="considered">Considered</button>
+        <div class="chart-toolbar-category-buttons">
+          <button type="button" class="chart-toggle-btn ${!consideredOnly ? 'active' : ''}" data-scope="all">All tasks</button>
+          <button type="button" class="chart-toggle-btn ${consideredOnly ? 'active' : ''}" data-scope="considered">Considered</button>
+        </div>
       </div>
     </div>
   `;
@@ -1780,13 +1787,6 @@ export function renderBranchTasksVolume(containerId) {
       renderBranchTasksVolume(containerId);
     });
   });
-
-  if (chartInstances[containerId]) {
-    chartInstances[containerId].dispose();
-    delete chartInstances[containerId];
-  }
-  const chart = echarts.init(bodyEl, null, { renderer: 'canvas' });
-  chartInstances[containerId] = chart;
 
   let rows = getFilteredRawData();
   if (consideredOnly) rows = rows.filter(isRowConsideredForKpi);
@@ -1815,9 +1815,19 @@ export function renderBranchTasksVolume(containerId) {
   const maxAvg = Math.max(...avgDays, 0.01) * 1.15;
   const n = Math.max(names.length, 1);
   const rowH = Math.min(24, Math.max(16, 360 / n));
-  const bodyMinH = Math.max(320, n * rowH + 120);
+  const bodyMinH = list.length === 0
+    ? 280
+    : Math.max(320, n * rowH + 120);
   bodyEl.style.minHeight = `${bodyMinH}px`;
+  bodyEl.style.height = `${bodyMinH}px`;
   el.style.minHeight = `${bodyMinH + 110}px`;
+
+  if (chartInstances[containerId]) {
+    chartInstances[containerId].dispose();
+    delete chartInstances[containerId];
+  }
+  const chart = echarts.init(bodyEl, null, { renderer: 'canvas' });
+  chartInstances[containerId] = chart;
 
   if (list.length === 0) {
     chart.setOption({
@@ -1832,6 +1842,9 @@ export function renderBranchTasksVolume(containerId) {
       series: []
     });
     chart.resize();
+    requestAnimationFrame(() => {
+      chart.resize();
+    });
     return;
   }
 
@@ -1856,9 +1869,12 @@ export function renderBranchTasksVolume(containerId) {
     legend: {
       data: ['Task volume', 'Avg duration'],
       textStyle: { color: chartAxisLabelCat(), fontSize: 11 },
-      top: 0
+      left: 'center',
+      bottom: 4,
+      itemGap: 20
     },
-    grid: { left: '14%', right: '10%', top: 44, bottom: 32 },
+    /* Legend below plot so it does not cover the top “Avg days” x-axis */
+    grid: { left: '14%', right: '10%', top: 32, bottom: 52 },
     xAxis: [
       {
         type: 'value',
@@ -1920,4 +1936,7 @@ export function renderBranchTasksVolume(containerId) {
     animationDuration: 900
   });
   chart.resize();
+  requestAnimationFrame(() => {
+    chart.resize();
+  });
 }
