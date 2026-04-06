@@ -52,6 +52,15 @@ function isRowConsideredForKpi(r) {
   return (r['Exceptions'] || '').toString().toLowerCase().includes('consider');
 }
 
+/** First word on one line, remainder on the next (e.g. Fiber Support → Fiber\\nSupport). */
+function formatTaskTypeAxisLabelTwoLines(name) {
+  if (name == null || name === '') return '';
+  const s = String(name).trim();
+  const i = s.indexOf(' ');
+  if (i === -1) return s;
+  return `${s.slice(0, i)}\n${s.slice(i + 1).trim()}`;
+}
+
 const COLORS = {
   blue: '#6384ff',
   purple: '#a78bfa',
@@ -413,12 +422,19 @@ export function renderTaskTypeResolutionTargets(containerId) {
       textStyle: { color: chartAxisLabelCat(), fontSize: 11 },
       top: 0
     },
-    grid: { left: 60, right: 50, top: 36, bottom: 50 },
+    grid: { left: 60, right: 50, top: 36, bottom: 88 },
     xAxis: {
       type: 'category',
       data: labels,
       axisLine: { lineStyle: { color: chartAxisLine() } },
-      axisLabel: { color: chartAxisLabelCat(), fontSize: 12, rotate: 30 },
+      axisLabel: {
+        color: chartAxisLabelCat(),
+        fontSize: 12,
+        rotate: 0,
+        interval: 0,
+        lineHeight: 15,
+        formatter: (value) => formatTaskTypeAxisLabelTwoLines(value)
+      },
       axisTick: { show: false }
     },
     yAxis: [
