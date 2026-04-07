@@ -218,6 +218,7 @@ function initCalendarSystemToggle() {
   sync();
   en?.addEventListener('click', () => {
     setCalendarSystem('english');
+    setFilter('bsMonthCode', '');
     sync();
     calendarPickerApi?.refreshCalendarDisplay?.();
     renderAll();
@@ -226,6 +227,12 @@ function initCalendarSystemToggle() {
   });
   ne?.addEventListener('click', () => {
     setCalendarSystem('nepali');
+    const monthEl = document.getElementById('filter-date-month');
+    const bsHidden = document.getElementById('filter-bs-month');
+    if (monthEl?.value && bsHidden) {
+      syncBsMonthHiddenFromGregorianYm(monthEl.value);
+      setFilter('bsMonthCode', bsHidden.value || '');
+    }
     sync();
     calendarPickerApi?.refreshCalendarDisplay?.();
     renderAll();
@@ -321,10 +328,12 @@ function initDateFilters() {
     monthEl.value = nep.monthYYYYMM;
     if (bsMonthHidden) bsMonthHidden.value = nep.bsMonthCode;
     setFilter('dateAnchor', nep.dateAnchor);
+    setFilter('bsMonthCode', nep.bsMonthCode);
   } else {
     monthEl.value = monthYm;
     syncBsMonthHiddenFromGregorianYm(monthYm);
     setFilter('dateAnchor', monthStartText);
+    setFilter('bsMonthCode', '');
   }
 
   calendarPickerApi = createCalendarPicker({
@@ -374,9 +383,11 @@ function initDateFilters() {
         monthEl.value = nep.monthYYYYMM;
         if (bsMonthHidden) bsMonthHidden.value = nep.bsMonthCode;
         setFilter('dateAnchor', nep.dateAnchor);
+        setFilter('bsMonthCode', nep.bsMonthCode);
       } else {
         syncBsMonthHiddenFromGregorianYm(monthEl.value);
         setFilter('dateAnchor', monthToDate(monthEl.value));
+        setFilter('bsMonthCode', '');
       }
     } else if (mode === 'custom') {
       setFilter('dateFrom', fromEl.value);

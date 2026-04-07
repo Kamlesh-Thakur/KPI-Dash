@@ -334,6 +334,7 @@ export function createCalendarPicker({
           const nd = NepaliDate.fromAD(new Date(year, idx, 1));
           bsHidden.value = formatBsMonthCode(nd.getYear(), nd.getMonth());
         }
+        setFilter('bsMonthCode', '');
         setFilter('dateAnchor', `${ym}-01`);
         updateMonthTrigger();
         closeCalPopover();
@@ -360,6 +361,7 @@ export function createCalendarPicker({
         const ym = `${adFirst.getFullYear()}-${String(adFirst.getMonth() + 1).padStart(2, '0')}`;
         if (monthEl) monthEl.value = ym;
         if (bsHidden) bsHidden.value = formatBsMonthCode(bsYear, idx);
+        setFilter('bsMonthCode', formatBsMonthCode(bsYear, idx));
         setFilter('dateAnchor', fmt(new Date(adFirst.getFullYear(), adFirst.getMonth(), 1)));
         updateMonthTrigger();
         closeCalPopover();
@@ -416,6 +418,7 @@ export function createCalendarPicker({
             const ym = `${adFirst.getFullYear()}-${String(adFirst.getMonth() + 1).padStart(2, '0')}`;
             if (monthEl) monthEl.value = ym;
             if (bsHidden) bsHidden.value = formatBsMonthCode(now.getYear(), now.getMonth());
+            setFilter('bsMonthCode', formatBsMonthCode(now.getYear(), now.getMonth()));
             setFilter('dateAnchor', fmt(new Date(adFirst.getFullYear(), adFirst.getMonth(), 1)));
             updateMonthTrigger();
             closeCalPopover();
@@ -443,6 +446,7 @@ export function createCalendarPicker({
             e.stopPropagation();
             const t = new Date();
             document.getElementById('filter-date-month').value = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}`;
+            setFilter('bsMonthCode', '');
             setFilter('dateAnchor', fmt(new Date(t.getFullYear(), t.getMonth(), 1)));
             updateMonthTrigger();
             closeCalPopover();

@@ -2,6 +2,9 @@
  * Data Store — holds all loaded data and provides filtered views.
  */
 
+import { getCalendarSystem } from './calendarPrefs.js';
+import { getBsMonthAdDateRange, parseBsMonthCode } from './nepaliCalendarUi.js';
+
 const STATE = {
   rawData: [],
   incidentData: [],
@@ -21,7 +24,9 @@ const STATE = {
     dateMode: 'monthly',
     dateAnchor: '',
     dateFrom: '',
-    dateTo: ''
+    dateTo: '',
+    /** Bikram Sambat month code `YYYY-MM` (month index 00–11). Used for monthly range when Nepali calendar is active. */
+    bsMonthCode: ''
   }
 };
 
@@ -328,6 +333,15 @@ export function getDateFilterRange(filters = STATE.filters) {
   }
 
   if (mode === 'monthly') {
+    const bsCode = filters.bsMonthCode;
+    const useBsMonth =
+      getCalendarSystem() === 'nepali' &&
+      bsCode &&
+      parseBsMonthCode(bsCode);
+    if (useBsMonth) {
+      const bsRange = getBsMonthAdDateRange(bsCode);
+      if (bsRange) return bsRange;
+    }
     const start = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
     const end = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
     return { start, end };

@@ -76,6 +76,29 @@ export function parseBsMonthCode(str) {
   return { bsYear, bsMonthIndex };
 }
 
+/** Local date at midnight (no time component drift). */
+function toDateOnlyLocal(d) {
+  if (!(d instanceof Date) || Number.isNaN(d.getTime())) return null;
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+/**
+ * Inclusive AD date range for one Bikram Sambat month (for filters / charts).
+ * Use when monthly mode must follow BS boundaries, not Gregorian calendar months.
+ */
+export function getBsMonthAdDateRange(bsMonthCode) {
+  const parsed = parseBsMonthCode(bsMonthCode);
+  if (!parsed) return null;
+  const { bsYear, bsMonthIndex } = parsed;
+  const dim = getDaysInBsMonth(bsYear, bsMonthIndex);
+  const startAd = new NepaliDate(bsYear, bsMonthIndex, 1).toJsDate();
+  const endAd = new NepaliDate(bsYear, bsMonthIndex, dim).toJsDate();
+  const start = toDateOnlyLocal(startAd);
+  const end = toDateOnlyLocal(endAd);
+  if (!start || !end) return null;
+  return { start, end };
+}
+
 /**
  * Same rule as choosing the current BS month in the Nepali month picker: map "today" (or any ref)
  * to Gregorian YYYY-MM + first-of-month anchor for that BS month’s calendar start.
