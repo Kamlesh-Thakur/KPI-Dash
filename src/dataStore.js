@@ -145,20 +145,34 @@ function isWithinDateFilter(rowDate, filters) {
   return true;
 }
 
-/** Load data from parsed XLSX sheets */
-export function loadData(workbook, XLSX) {
+/**
+ * Load data from parsed XLSX sheets.
+ * @param {object} workbook - Parsed XLSX workbook
+ * @param {object} XLSX - xlsx library
+ * @param {{ append?: boolean }} [options] - If append is true, Raw Data and Incident rows are concatenated;
+ *   Branch Effi. / Sheet2 / Drop Down are re-applied from this workbook when present (last file wins).
+ */
+export function loadData(workbook, XLSX, options = {}) {
+  const append = options.append === true;
+
   // Raw Data sheet
   const rawSheet = workbook.Sheets['Raw Data'];
   if (rawSheet) {
     const json = XLSX.utils.sheet_to_json(rawSheet, { defval: '' });
-    STATE.rawData = json.map(r => cleanRow(r));
+    const rows = json.map(r => cleanRow(r));
+    STATE.rawData = append ? [...STATE.rawData, ...rows] : rows;
+  } else if (!append) {
+    STATE.rawData = [];
   }
 
   // Incident sheet
   const incSheet = workbook.Sheets['Incident'];
   if (incSheet) {
     const json = XLSX.utils.sheet_to_json(incSheet, { defval: '' });
-    STATE.incidentData = json.map(r => cleanRow(r));
+    const rows = json.map(r => cleanRow(r));
+    STATE.incidentData = append ? [...STATE.incidentData, ...rows] : rows;
+  } else if (!append) {
+    STATE.incidentData = [];
   }
 
   // Branch Efficiency sheet

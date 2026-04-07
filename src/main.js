@@ -81,20 +81,47 @@ document.addEventListener('DOMContentLoaded', () => {
 // ==========================================
 // AUTO LOAD
 // ==========================================
+
+/** KPI workbooks under public/data — loaded in order, rows merged (later file wins for Branch Effi. / Sheet2 / Drop Down). */
+const KPI_DATA_FILES = ['kpi-falgun-2082.xlsx', 'kpi-chaitra-2082.xlsx'];
+
 async function autoLoadExcel() {
-  showToast('Loading data from Excel file...', 'info');
+  showToast('Loading data from Excel…', 'info');
 
   try {
-    const response = await fetch(`${import.meta.env.BASE_URL}data/kpi-data.xlsx`);
-    if (!response.ok) {
-      showToast('Place your Excel file in public/data/ folder or use Import', 'info');
-      return;
+    let merged = false;
+    for (let i = 0; i < KPI_DATA_FILES.length; i++) {
+      const name = KPI_DATA_FILES[i];
+      const response = await fetch(`${import.meta.env.BASE_URL}data/${name}`);
+      if (!response.ok) {
+        showToast(`Missing ${name} in public/data/ or use Import`, 'info');
+        return;
+      }
+      const buf = await response.arrayBuffer();
+      const workbook = XLSX.read(buf, { type: 'array' });
+      loadData(workbook, XLSX, { append: i > 0 });
+      merged = true;
     }
-    const buf = await response.arrayBuffer();
-    processExcelBuffer(buf);
+    if (!merged) return;
+
+    dataLoaded = true;
+    populateFilters();
+    try {
+      renderAll();
+    } catch (e) {
+      console.error('[autoLoadExcel] renderAll failed', e);
+      showToast('Dashboard render error — check console', 'info');
+    }
+    setTimeout(() => resizeCharts(), 50);
+    setTimeout(() => resizeCharts(), 250);
+    showToast(
+      `Data loaded: ${formatNumber(getFilteredRawData().length)} tasks, ${formatNumber(getFilteredIncidentData().length)} incidents`,
+      'success'
+    );
+
     loadTeamPerformanceWorkbook();
   } catch (e) {
-    console.log('No pre-loaded data file found. Use Import to load data.');
+    console.log('No pre-loaded data file found. Use Import to load data.', e);
   }
 }
 
