@@ -1222,8 +1222,13 @@ export function renderIncidentCategory(containerId) {
   const display = showAll ? sorted : sorted.slice(0, 10);
   const names = display.map((s) => s[0]);
   const counts = display.map((s) => s[1]);
+  const total = Math.max(data.length, 1);
+  const rowsReversed = display
+    .map(([name, count]) => ({ name, count, pct: (count / total) * 100 }))
+    .reverse();
   const n = Math.max(names.length, 1);
-  const barH = Math.min(26, Math.max(14, 340 / n));
+  // Keep bar thickness consistent between Top 10 and All categories.
+  const barH = 26;
   const bodyMinH = Math.max(280, n * barH + 72);
   // Fixed height overrides global .chart-body { height: calc(100% - 40px) }, which can block shrinking.
   bodyEl.style.minHeight = `${bodyMinH}px`;
@@ -1241,9 +1246,19 @@ export function renderIncidentCategory(containerId) {
   chart.setOption({
     tooltip: {
       trigger: 'axis',
-      ...chartTooltipTheme(12)
+      ...chartTooltipTheme(12),
+      formatter: (params) => {
+        const p = params?.[0];
+        if (!p) return '';
+        const row = rowsReversed[p.dataIndex];
+        const category = row?.name || p.name;
+        const count = row?.count || 0;
+        const pct = row?.pct || 0;
+        return `${category}<br/>Count: ${formatNumber(count)}<br/>Share: ${pct.toFixed(1)}%`;
+      }
     },
-    grid: { left: 180, right: 30, top: 10, bottom: 20 },
+    // Keep chart area balanced within the card; containLabel reserves only what's needed.
+    grid: { left: 12, right: 100, top: 8, bottom: 16, containLabel: true },
     xAxis: {
       type: 'value',
       splitLine: { lineStyle: { color: chartSplitLine() } },
@@ -1251,15 +1266,32 @@ export function renderIncidentCategory(containerId) {
     },
     yAxis: {
       type: 'category',
-      data: [...names].reverse(),
+      data: rowsReversed.map((r) => r.name),
       axisLine: { lineStyle: { color: chartAxisLine() } },
-      axisLabel: { color: chartAxisLabelCat(), fontSize: 12, width: 160, overflow: 'truncate' },
+      axisLabel: {
+        color: chartAxisLabelCat(),
+        fontSize: 11,
+        width: 220,
+        overflow: 'break',
+        lineHeight: 14
+      },
       axisTick: { show: false }
     },
     series: [{
       type: 'bar',
-      data: [...counts].reverse(),
+      data: rowsReversed.map((r) => r.count),
       barMaxWidth: 22,
+      label: {
+        show: true,
+        position: 'right',
+        color: chartAxisLabelValue(),
+        fontSize: 11,
+        formatter: (p) => {
+          const count = p.value || 0;
+          const pct = total > 0 ? (count / total) * 100 : 0;
+          return `${formatNumber(count)} (${pct.toFixed(1)}%)`;
+        }
+      },
       itemStyle: {
         borderRadius: [0, 6, 6, 0],
         color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
