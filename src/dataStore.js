@@ -32,6 +32,53 @@ const STATE = {
   }
 };
 
+const FILTERED_CACHE = {
+  key: '',
+  raw: null,
+  incident: null
+};
+
+function invalidateFilteredCache() {
+  FILTERED_CACHE.key = '';
+  FILTERED_CACHE.raw = null;
+  FILTERED_CACHE.incident = null;
+}
+
+function buildFilteredCacheKey(filters, startDate, endDate) {
+  const f = filters || {};
+  const start = startDate instanceof Date ? startDate.toISOString().slice(0, 10) : '';
+  const end = endDate instanceof Date ? endDate.toISOString().slice(0, 10) : '';
+  return [
+    f.filterBy || '',
+    f.division || '',
+    f.region || '',
+    f.branch || '',
+    f.taskType || '',
+    f.dateMode || 'overall',
+    f.dateAnchor || '',
+    f.dateFrom || '',
+    f.dateTo || '',
+    f.bsMonthCode || '',
+    start,
+    end,
+    // Include data lengths so cache invalidates after new workbook load.
+    STATE.rawData.length,
+    STATE.incidentData.length
+  ].join('|');
+}
+
+function ensureFilteredCache(filters = STATE.filters) {
+  const ranged = getDateFilterRange(filters);
+  const key = buildFilteredCacheKey(filters, ranged.start, ranged.end);
+  if (FILTERED_CACHE.key === key && FILTERED_CACHE.raw && FILTERED_CACHE.incident) {
+    return FILTERED_CACHE;
+  }
+  FILTERED_CACHE.key = key;
+  FILTERED_CACHE.raw = getFilteredRawDataForRange(ranged.start, ranged.end, filters);
+  FILTERED_CACHE.incident = getFilteredIncidentDataForRange(ranged.start, ranged.end, filters);
+  return FILTERED_CACHE;
+}
+
 /** Parse Excel serial date to JS Date */
 export function excelDateToJS(serial) {
   if (!serial || typeof serial !== 'number') return null;
@@ -246,6 +293,22 @@ export function loadData(workbook, XLSX, options = {}) {
     STATE.overallKpi = null;
   }
 
+  invalidateFilteredCache();
+  return STATE;
+}
+
+/**
+ * Load precomputed monthly snapshot (generated offline from source workbooks).
+ * Keeps the same in-memory shape used by the app so filters/charts continue to run on-demand.
+ */
+export function loadPrecomputedData(snapshot = {}) {
+  STATE.rawData = Array.isArray(snapshot.rawData) ? snapshot.rawData : [];
+  STATE.incidentData = Array.isArray(snapshot.incidentData) ? snapshot.incidentData : [];
+  STATE.branchEfficiency = Array.isArray(snapshot.branchEfficiency) ? snapshot.branchEfficiency : [];
+  STATE.branchMapping = Array.isArray(snapshot.branchMapping) ? snapshot.branchMapping : [];
+  STATE.dropdowns = Array.isArray(snapshot.dropdowns) ? snapshot.dropdowns : [];
+  STATE.overallKpi = snapshot.overallKpi || null;
+  invalidateFilteredCache();
   return STATE;
 }
 
@@ -338,21 +401,19 @@ export function loadTeamPerformanceData(workbook, XLSX) {
 
 /** Get filtered raw data */
 export function getFilteredRawData() {
-  const f = STATE.filters;
-  const ranged = getDateFilterRange();
-  return getFilteredRawDataForRange(ranged.start, ranged.end, f);
+  return ensureFilteredCache(STATE.filters).raw || [];
 }
 
 /** Get filtered incident data */
 export function getFilteredIncidentData() {
-  const f = STATE.filters;
-  const ranged = getDateFilterRange();
-  return getFilteredIncidentDataForRange(ranged.start, ranged.end, f);
+  return ensureFilteredCache(STATE.filters).incident || [];
 }
 
 /** Set a filter value */
 export function setFilter(key, value) {
+  if (STATE.filters[key] === value) return;
   STATE.filters[key] = value;
+  invalidateFilteredCache();
 }
 
 /** Get unique values from a column */

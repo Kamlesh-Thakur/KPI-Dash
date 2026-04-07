@@ -7,7 +7,7 @@ import { createGrid } from 'ag-grid-community';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-quartz.css';
 import {
-  loadData, loadTeamPerformanceData, getFilteredRawData, getFilteredIncidentData,
+  loadData, loadPrecomputedData, loadTeamPerformanceData, getFilteredRawData, getFilteredIncidentData,
   getFilteredRawDataForRange, getFilteredIncidentDataForRange, getDateFilterRange,
   setFilter, getUniqueValues, formatNumber,
   excelDateToJS, formatDuration, getState,
@@ -85,11 +85,69 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /** KPI workbooks under public/data — loaded in order, rows merged (later file wins for Branch Effi. / Sheet2 / Drop Down). */
 const KPI_DATA_FILES = ['kpi-falgun-2082.xlsx', 'kpi-chaitra-2082.xlsx'];
+const PRECOMPUTED_DATA_FILE = 'precomputed-kpi.json';
+
+async function checkPrecomputedFreshness(snapshot) {
+  if (!snapshot || !snapshot.sourceMeta) return;
+  try {
+    let stale = false;
+    for (const name of KPI_DATA_FILES) {
+      const expected = snapshot.sourceMeta[name];
+      if (!expected) continue;
+      const res = await fetch(`${import.meta.env.BASE_URL}data/${name}`, {
+        method: 'HEAD',
+        cache: 'no-store'
+      });
+      if (!res.ok) continue;
+      const len = Number(res.headers.get('content-length'));
+      const lastModified = res.headers.get('last-modified');
+      const mtimeMs = lastModified ? Date.parse(lastModified) : NaN;
+      if (!Number.isNaN(len) && expected.size && len !== Number(expected.size)) {
+        stale = true;
+        break;
+      }
+      if (!Number.isNaN(mtimeMs) && expected.mtimeMs && Math.abs(mtimeMs - Number(expected.mtimeMs)) > 1000) {
+        stale = true;
+        break;
+      }
+    }
+    if (stale) {
+      showToast('Precomputed KPI data may be stale. Run `npm run precompute:data` after workbook updates.', 'info');
+    }
+  } catch (_e) {
+    // Non-fatal: snapshot is still usable.
+  }
+}
 
 async function autoLoadExcel() {
-  showToast('Loading data from Excel…', 'info');
+  showToast('Loading KPI data…', 'info');
 
   try {
+    // Preferred path: precomputed monthly snapshot for fast first paint.
+    const precomputed = await fetch(`${import.meta.env.BASE_URL}data/${PRECOMPUTED_DATA_FILE}`);
+    if (precomputed.ok) {
+      const payload = await precomputed.json();
+      loadPrecomputedData(payload);
+      dataLoaded = true;
+      populateFilters();
+      try {
+        renderAll();
+      } catch (e) {
+        console.error('[autoLoadExcel] renderAll failed (precomputed)', e);
+        showToast('Dashboard render error — check console', 'info');
+      }
+      setTimeout(() => resizeCharts(), 50);
+      setTimeout(() => resizeCharts(), 250);
+      showToast(
+        `Data loaded: ${formatNumber(getFilteredRawData().length)} tasks, ${formatNumber(getFilteredIncidentData().length)} incidents`,
+        'success'
+      );
+      checkPrecomputedFreshness(payload);
+      loadTeamPerformanceWorkbook();
+      return;
+    }
+
+    // Fallback path: parse source workbooks in browser.
     let merged = false;
     for (let i = 0; i < KPI_DATA_FILES.length; i++) {
       const name = KPI_DATA_FILES[i];
