@@ -1286,6 +1286,7 @@ export function renderIncidentCategory(containerId) {
         position: 'right',
         color: chartAxisLabelValue(),
         fontSize: 11,
+        fontWeight: 700,
         formatter: (p) => {
           const count = p.value || 0;
           const pct = total > 0 ? (count / total) * 100 : 0;
@@ -2018,6 +2019,18 @@ export function renderBranchTasksVolume(containerId) {
         xAxisIndex: 0,
         data: volRev,
         barMaxWidth: 18,
+        label: {
+          show: true,
+          position: 'right',
+          color: chartAxisLabelValue(),
+          fontSize: 11,
+          fontWeight: 700,
+          formatter: (p) => {
+            const count = volRev[p.dataIndex] || 0;
+            const avg = avgRev[p.dataIndex] || 0;
+            return `${formatNumber(count)} (${avg.toFixed(1)}h)`;
+          }
+        },
         itemStyle: {
           borderRadius: [0, 6, 6, 0],
           color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
