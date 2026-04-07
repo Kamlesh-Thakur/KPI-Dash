@@ -177,7 +177,21 @@ export function loadData(workbook, XLSX, options = {}) {
   if (incSheet) {
     const json = XLSX.utils.sheet_to_json(incSheet, { defval: '' });
     const rows = json.map(r => cleanRow(r));
-    STATE.incidentData = append ? [...STATE.incidentData, ...rows] : rows;
+    if (append && STATE.incidentData.length) {
+      // Append and de‑duplicate by Incident ID (and Completed date if missing ID)
+      const merged = [...STATE.incidentData, ...rows];
+      const byKey = new Map();
+      for (const r of merged) {
+        const id = (r['Incident ID'] || '').toString().trim();
+        const completed = r['Completed date'] ?? r['Task Completed'] ?? '';
+        const key = id || `${completed}::${JSON.stringify(r)}`;
+        // Last file wins for duplicates
+        byKey.set(key, r);
+      }
+      STATE.incidentData = [...byKey.values()];
+    } else {
+      STATE.incidentData = rows;
+    }
   } else if (!append) {
     STATE.incidentData = [];
   }
