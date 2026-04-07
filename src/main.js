@@ -10,7 +10,8 @@ import {
   loadData, loadTeamPerformanceData, getFilteredRawData, getFilteredIncidentData,
   getFilteredRawDataForRange, getFilteredIncidentDataForRange, getDateFilterRange,
   setFilter, getUniqueValues, formatNumber,
-  excelDateToJS, formatDuration, getState
+  excelDateToJS, formatDuration, getState,
+  incidentDurationHours, isSameDayClosure, isIncidentExcludedFromKpi
 } from './dataStore.js';
 import { formatDisplayDate, formatDisplayDateRange } from './dateDisplay.js';
 import {
@@ -840,8 +841,11 @@ function isKpiExclusionConsidered(r) {
   return (r['Exceptions'] || '').toString().toLowerCase().includes('consider');
 }
 
-/** Same duration / exception rules as Task KPI matrix (buildTaskKPIRows). */
-function toRowMetrics(rows) {
+/**
+ * Task rows: Raw Data `Duration` is days (fractional); hours = days × 24. Matches Overall KPI / Raw Data BF.
+ * Incident rows: `Duration_1` is hours from (Closed At − First Incident At) × 24; matches Overall KPI Incident sheet COUNTIFS on AD.
+ */
+function toRowMetrics(rows, { incident } = {}) {
   const total = rows.length;
   if (!total) {
     return {
@@ -854,33 +858,62 @@ function toRowMetrics(rows) {
       sameDay: 0,
       within4h: 0,
       within24h: 0,
-      kpiExclusion: 0
+      kpiExclusion: 0,
+      kpiExclusionDenominator: 0
     };
   }
-  const sameDay = rows.filter(r => r['Same day Closure'] === true).length;
-  const avgDuration = rows.reduce((s, r) => s + (parseFloat(r['Duration']) || 0), 0) / total;
+  const sameDay = rows.filter((r) => isSameDayClosure(r)).length;
+  const avgDuration = incident
+    ? rows.reduce((s, r) => s + (incidentDurationHours(r) ?? 0), 0) / total / 24
+    : rows.reduce((s, r) => s + (parseFloat(r['Duration']) || 0), 0) / total;
   let within4h = 0;
   let within24h = 0;
   let kpiExclusion = 0;
-  for (const r of rows) {
-    const h = rowDurationHours(r);
-    if (h != null) {
-      if (h <= 4) within4h += 1;
-      if (h <= 24) within24h += 1;
+  let kpiExclusionDenominator = total;
+  let kpiExclusionRate = 0;
+
+  if (incident) {
+    let excluded = 0;
+    let within24InPool = 0;
+    for (const r of rows) {
+      const h = incidentDurationHours(r);
+      if (h != null) {
+        if (h < 4) within4h += 1;
+        if (h < 24) within24h += 1;
+      }
+      if (isIncidentExcludedFromKpi(r)) {
+        excluded += 1;
+      } else if (h != null && h < 24) {
+        within24InPool += 1;
+      }
     }
-    if (isKpiExclusionConsidered(r)) kpiExclusion += 1;
+    kpiExclusionDenominator = total - excluded;
+    kpiExclusion = within24InPool;
+    kpiExclusionRate = kpiExclusionDenominator > 0 ? (within24InPool / kpiExclusionDenominator) * 100 : 0;
+  } else {
+    for (const r of rows) {
+      const h = rowDurationHours(r);
+      if (h != null) {
+        if (h < 4) within4h += 1;
+        if (h < 24) within24h += 1;
+      }
+      if (isKpiExclusionConsidered(r)) kpiExclusion += 1;
+    }
+    kpiExclusionRate = (kpiExclusion / total) * 100;
   }
+
   return {
     total,
     sameDayRate: (sameDay / total) * 100,
     avgDuration,
     within4hRate: (within4h / total) * 100,
     within24hRate: (within24h / total) * 100,
-    kpiExclusionRate: (kpiExclusion / total) * 100,
+    kpiExclusionRate,
     sameDay,
     within4h,
     within24h,
-    kpiExclusion
+    kpiExclusion,
+    kpiExclusionDenominator
   };
 }
 
@@ -894,7 +927,7 @@ function renderKPICards() {
   const sameDay = taskM.sameDay;
   const avgDuration = taskM.avgDuration;
   const taskTypes = new Set(data.map(r => r['Task Type'])).size;
-  const incM = toRowMetrics(incidentData);
+  const incM = toRowMetrics(incidentData, { incident: true });
   const incidentTotal = incM.total;
   const incidentSameDay = incM.sameDay;
   const incidentAvgDuration = incM.avgDuration;
@@ -983,10 +1016,10 @@ function renderKPICards() {
           <div class="kpi-change up">${formatNumber(incM.within24h)} / ${formatNumber(incidentTotal)}</div>
           ${showComparisons ? renderCompareRow(compare.incidents.within24hRate, true, compareChipLabels) : ''}
         </div>
-        <div class="kpi-card indigo" title="KPI after exclusion — Exceptions contains &quot;consider&quot;">
+        <div class="kpi-card indigo" title="Within 24h among incidents not excluded. Excluded: Exceptions contains Delayed and duration &gt; 24h.">
           <div class="kpi-label">KPI After Excl.</div>
           <div class="kpi-value">${incidentTotal > 0 ? formatKpiPercent(incM.kpiExclusionRate) : '0.00%'}</div>
-          <div class="kpi-change up">${formatNumber(incM.kpiExclusion)} / ${formatNumber(incidentTotal)}</div>
+          <div class="kpi-change up">${formatNumber(incM.kpiExclusion)} / ${formatNumber(incM.kpiExclusionDenominator)}</div>
           ${showComparisons ? renderCompareRow(compare.incidents.kpiExclusionRate, true, compareChipLabels) : ''}
         </div>
         <div class="kpi-card emerald" title="Same-day closure">
@@ -1115,12 +1148,12 @@ function buildComparisons() {
       kpiExclusionRate: deltaPair(toRowMetrics(currTasks).kpiExclusionRate, toRowMetrics(prevTasks).kpiExclusionRate, toRowMetrics(yoyTasks).kpiExclusionRate)
     },
     incidents: {
-      total: deltaPair(toRowMetrics(currInc).total, toRowMetrics(prevInc).total, toRowMetrics(yoyInc).total),
-      sameDayRate: deltaPair(toRowMetrics(currInc).sameDayRate, toRowMetrics(prevInc).sameDayRate, toRowMetrics(yoyInc).sameDayRate),
-      avgDuration: deltaPair(toRowMetrics(currInc).avgDuration, toRowMetrics(prevInc).avgDuration, toRowMetrics(yoyInc).avgDuration),
-      within4hRate: deltaPair(toRowMetrics(currInc).within4hRate, toRowMetrics(prevInc).within4hRate, toRowMetrics(yoyInc).within4hRate),
-      within24hRate: deltaPair(toRowMetrics(currInc).within24hRate, toRowMetrics(prevInc).within24hRate, toRowMetrics(yoyInc).within24hRate),
-      kpiExclusionRate: deltaPair(toRowMetrics(currInc).kpiExclusionRate, toRowMetrics(prevInc).kpiExclusionRate, toRowMetrics(yoyInc).kpiExclusionRate)
+      total: deltaPair(toRowMetrics(currInc, { incident: true }).total, toRowMetrics(prevInc, { incident: true }).total, toRowMetrics(yoyInc, { incident: true }).total),
+      sameDayRate: deltaPair(toRowMetrics(currInc, { incident: true }).sameDayRate, toRowMetrics(prevInc, { incident: true }).sameDayRate, toRowMetrics(yoyInc, { incident: true }).sameDayRate),
+      avgDuration: deltaPair(toRowMetrics(currInc, { incident: true }).avgDuration, toRowMetrics(prevInc, { incident: true }).avgDuration, toRowMetrics(yoyInc, { incident: true }).avgDuration),
+      within4hRate: deltaPair(toRowMetrics(currInc, { incident: true }).within4hRate, toRowMetrics(prevInc, { incident: true }).within4hRate, toRowMetrics(yoyInc, { incident: true }).within4hRate),
+      within24hRate: deltaPair(toRowMetrics(currInc, { incident: true }).within24hRate, toRowMetrics(prevInc, { incident: true }).within24hRate, toRowMetrics(yoyInc, { incident: true }).within24hRate),
+      kpiExclusionRate: deltaPair(toRowMetrics(currInc, { incident: true }).kpiExclusionRate, toRowMetrics(prevInc, { incident: true }).kpiExclusionRate, toRowMetrics(yoyInc, { incident: true }).kpiExclusionRate)
     }
   };
 }
@@ -1202,7 +1235,7 @@ function renderIncidentKPICards() {
   const container = document.getElementById('incident-kpi-cards');
 
   const total = data.length;
-  const sameDay = data.filter(r => r['Same day Closure'] === true).length;
+  const sameDay = data.filter((r) => isSameDayClosure(r)).length;
   const delayed = data.filter(r => (r['Exceptions'] || '').toLowerCase().includes('delayed')).length;
   const categories = new Set(data.map(r => r['Category'])).size;
 

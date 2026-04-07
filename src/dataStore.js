@@ -8,6 +8,8 @@ import { getBsMonthAdDateRange, parseBsMonthCode } from './nepaliCalendarUi.js';
 const STATE = {
   rawData: [],
   incidentData: [],
+  /** Snapshot of the last loaded workbook's "Overall KPI" sheet (values; formulas not evaluated in-browser). */
+  overallKpi: null,
   branchEfficiency: [],
   teamPerformance: {
     fsNew: [],
@@ -219,7 +221,56 @@ export function loadData(workbook, XLSX, options = {}) {
     STATE.dropdowns = json.map(r => cleanRow(r));
   }
 
+  // Overall KPI — summary sheet (same layout as Excel workbook; optional)
+  const overallSheet = workbook.Sheets['Overall KPI'];
+  if (overallSheet) {
+    STATE.overallKpi = {
+      rows: XLSX.utils.sheet_to_json(overallSheet, { defval: '', raw: true }),
+      ref: overallSheet['!ref'] || null
+    };
+  } else if (!append) {
+    STATE.overallKpi = null;
+  }
+
   return STATE;
+}
+
+/**
+ * Hours to resolve (matches Excel Incident column AD = (Closed At − First Incident At) × 24).
+ * SheetJS duplicates the header "Duration": computed hours are in `Duration_1`; the first `Duration`
+ * column is a display string — do not use it for KPI math.
+ */
+export function incidentDurationHours(r) {
+  const d1 = parseFloat(r['Duration_1']);
+  if (!Number.isNaN(d1)) return d1;
+  const closed = r['Closed At'];
+  const first = r['First Incident At'];
+  if (typeof closed === 'number' && typeof first === 'number' && !Number.isNaN(closed - first)) {
+    return (closed - first) * 24;
+  }
+  return null;
+}
+
+/** Same-day flag: Excel uses the literal "true" on Incident `Same day Closure`. */
+export function isSameDayClosure(r) {
+  const v = r['Same day Closure'];
+  return v === true || String(v).toLowerCase() === 'true';
+}
+
+/**
+ * Incident is excluded from the "KPI after exclusion" pool when Exceptions indicates Delayed
+ * and resolution duration (hours) is strictly greater than 24.
+ */
+export function isIncidentExcludedFromKpi(r) {
+  const exc = (r['Exceptions'] || '').toString().toLowerCase();
+  if (!exc.includes('delay')) return false;
+  const h = incidentDurationHours(r);
+  if (h == null) return false;
+  return h > 24;
+}
+
+export function getOverallKpiSnapshot() {
+  return STATE.overallKpi;
 }
 
 export function loadTeamPerformanceData(workbook, XLSX) {

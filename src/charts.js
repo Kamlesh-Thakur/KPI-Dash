@@ -9,7 +9,9 @@ import {
   getTeamPerformanceData,
   excelDateToJS,
   formatDuration,
-  formatNumber
+  formatNumber,
+  incidentDurationHours,
+  isSameDayClosure
 } from './dataStore.js';
 import { formatCategoryAxisDateLabel, buildAxisTooltipHtmlWithDates } from './dateDisplay.js';
 import {
@@ -424,9 +426,9 @@ function buildTaskKPIRows() {
     const durationDays = Number(r['Duration']);
     const durationHours = Number.isNaN(durationDays) ? null : durationDays * 24;
     const slaHours = task.toLowerCase().includes('incident') ? 4 : 8;
-    if (durationHours != null && durationHours <= slaHours) m.closedWithinSla += 1;
-    if (r['Same day Closure'] === true) m.closedSameDay += 1;
-    if (durationHours != null && durationHours <= 24) m.closedWithin24h += 1;
+    if (durationHours != null && durationHours < slaHours) m.closedWithinSla += 1;
+    if (isSameDayClosure(r)) m.closedSameDay += 1;
+    if (durationHours != null && durationHours < 24) m.closedWithin24h += 1;
   });
 
   const totalDays = Math.max(dayKeys.size, 1);
@@ -579,22 +581,21 @@ function getTaskTypeResolutionStats() {
     const duration = parseFloat(r['Duration']);
     if (!Number.isNaN(duration)) {
       const hours = duration * 24;
-      if (hours <= 4) rec.within4h += 1;
-      if (hours <= 24) rec.within24h += 1;
+      if (hours < 4) rec.within4h += 1;
+      if (hours < 24) rec.within24h += 1;
     }
-    if (r['Same day Closure'] === true) rec.sameDay += 1;
+    if (isSameDayClosure(r)) rec.sameDay += 1;
   });
 
   incidents.forEach((r) => {
     const rec = getOrInit('Incident');
     rec.total += 1;
-    const duration = parseFloat(r['Duration']);
-    if (!Number.isNaN(duration)) {
-      const hours = duration * 24;
-      if (hours <= 4) rec.within4h += 1;
-      if (hours <= 24) rec.within24h += 1;
+    const hours = incidentDurationHours(r);
+    if (hours != null) {
+      if (hours < 4) rec.within4h += 1;
+      if (hours < 24) rec.within24h += 1;
     }
-    if (r['Same day Closure'] === true) rec.sameDay += 1;
+    if (isSameDayClosure(r)) rec.sameDay += 1;
   });
 
   const stats = Object.values(byType)
@@ -1062,7 +1063,7 @@ export function renderSLAGauge(containerId) {
 
   const data = getFilteredRawData();
   const total = data.length;
-  const sameDay = data.filter(r => r['Same day Closure'] === true).length;
+  const sameDay = data.filter((r) => isSameDayClosure(r)).length;
   const rate = total > 0 ? Math.round((sameDay / total) * 100) : 0;
 
   chart.setOption({
@@ -1318,7 +1319,7 @@ export function renderIncidentClosure(containerId) {
   setTitle(titleEl, 'Same-Day Closure vs Delayed', 'green');
 
   const data = getFilteredIncidentData();
-  const sameDay = data.filter(r => r['Same day Closure'] === true).length;
+  const sameDay = data.filter((r) => isSameDayClosure(r)).length;
   const delayed = data.filter(r => {
     const exc = (r['Exceptions'] || '').toLowerCase();
     return exc.includes('delayed');
@@ -1633,12 +1634,12 @@ function getBranchClosureStats() {
     const b = r['Branch'] || 'N/A';
     if (!branchMap[b]) branchMap[b] = { total: 0, sameDay: 0, within4h: 0, within24h: 0 };
     branchMap[b].total++;
-    if (r['Same day Closure'] === true) branchMap[b].sameDay++;
+    if (isSameDayClosure(r)) branchMap[b].sameDay++;
     const durationValue = parseFloat(r['Duration']);
     if (!Number.isNaN(durationValue)) {
       const durHours = durationValue * 24;
-      if (durHours <= 4) branchMap[b].within4h++;
-      if (durHours <= 24) branchMap[b].within24h++;
+      if (durHours < 4) branchMap[b].within4h++;
+      if (durHours < 24) branchMap[b].within24h++;
     }
   });
 
@@ -1668,7 +1669,7 @@ export function renderDivisionCompare(containerId) {
     const d = r['Division'] || 'N/A';
     if (!divMap[d]) divMap[d] = { total: 0, sameDay: 0 };
     divMap[d].total++;
-    if (r['Same day Closure'] === true) divMap[d].sameDay++;
+    if (isSameDayClosure(r)) divMap[d].sameDay++;
   });
 
   const entries = Object.entries(divMap);
@@ -1716,7 +1717,7 @@ export function renderSameDayClosure(containerId) {
     const key = assignedDate.toISOString().slice(0, 10);
     if (!assignedByDate[key]) assignedByDate[key] = { assigned: 0, sameDay: 0 };
     assignedByDate[key].assigned += 1;
-    if (r['Same day Closure'] === true) assignedByDate[key].sameDay += 1;
+    if (isSameDayClosure(r)) assignedByDate[key].sameDay += 1;
   });
 
   const dates = Object.keys(assignedByDate).sort((a, b) => a.localeCompare(b));
