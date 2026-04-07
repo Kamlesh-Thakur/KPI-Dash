@@ -102,11 +102,12 @@ async function checkPrecomputedFreshness(snapshot) {
       const len = Number(res.headers.get('content-length'));
       const lastModified = res.headers.get('last-modified');
       const mtimeMs = lastModified ? Date.parse(lastModified) : NaN;
-      if (!Number.isNaN(len) && expected.size && len !== Number(expected.size)) {
-        stale = true;
-        break;
-      }
-      if (!Number.isNaN(mtimeMs) && expected.mtimeMs && Math.abs(mtimeMs - Number(expected.mtimeMs)) > 1000) {
+      const hasSize = !Number.isNaN(len) && expected.size;
+      const hasMtime = !Number.isNaN(mtimeMs) && expected.mtimeMs;
+      const sizeMismatch = hasSize ? (len !== Number(expected.size)) : false;
+      const mtimeMismatch = hasMtime ? (Math.abs(mtimeMs - Number(expected.mtimeMs)) > 1000) : false;
+      // Warn only when both signals disagree to avoid false positives from CDN header normalization.
+      if (sizeMismatch && mtimeMismatch) {
         stale = true;
         break;
       }
