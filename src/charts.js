@@ -1824,7 +1824,7 @@ export function renderBranchTasksVolume(containerId) {
         <div class="chart-toolbar-category" role="group" aria-label="Branch list scope">
           <span class="chart-toolbar-label">Branches</span>
           <div class="chart-toolbar-category-buttons">
-            <button type="button" class="chart-toggle-btn ${!showAllBranches ? 'active' : ''}" data-branches="top">Top 15</button>
+            <button type="button" class="chart-toggle-btn ${!showAllBranches ? 'active' : ''}" data-branches="top">Top 10</button>
             <button type="button" class="chart-toggle-btn ${showAllBranches ? 'active' : ''}" data-branches="all">All</button>
           </div>
         </div>
@@ -1880,12 +1880,12 @@ export function renderBranchTasksVolume(containerId) {
     }))
     .sort((a, b) => b.total - a.total);
 
-  if (!showAllBranches) list = list.slice(0, 15);
+  if (!showAllBranches) list = list.slice(0, 10);
 
   const names = list.map((x) => x.name);
   const volumes = list.map((x) => x.total);
-  const avgDays = list.map((x) => x.avgDuration);
-  const maxAvg = Math.max(...avgDays, 0.01) * 1.15;
+  const avgHours = list.map((x) => x.avgDuration * 24);
+  const maxAvg = Math.max(...avgHours, 0.01) * 1.15;
   const n = Math.max(names.length, 1);
   const rowH = Math.min(24, Math.max(16, 360 / n));
   const bodyMinH = list.length === 0
@@ -1923,7 +1923,7 @@ export function renderBranchTasksVolume(containerId) {
 
   const namesRev = [...names].reverse();
   const volRev = [...volumes].reverse();
-  const avgRev = [...avgDays].reverse();
+  const avgRev = [...avgHours].reverse();
 
   chart.setOption({
     tooltip: {
@@ -1936,17 +1936,17 @@ export function renderBranchTasksVolume(containerId) {
         const row = list.find((l) => l.name === branch);
         if (!row) return '';
         const scope = consideredOnly ? ' (Considered)' : '';
-        return `${branch}${scope}<br/>Tasks: ${formatNumber(row.total)}<br/>Avg duration: ${formatDuration(row.avgDuration)}`;
+        return `${branch}${scope}<br/>Tasks: ${formatNumber(row.total)}<br/>Average hours: ${(row.avgDuration * 24).toFixed(1)} h`;
       }
     },
     legend: {
-      data: ['Task volume', 'Avg duration'],
+      data: ['Task volume', 'Average hours'],
       textStyle: { color: chartAxisLabelCat(), fontSize: 11 },
       left: 'center',
       bottom: 4,
       itemGap: 20
     },
-    /* Legend below plot so it does not cover the top “Avg days” x-axis */
+    /* Legend below plot so it does not cover the top average-hours x-axis */
     grid: { left: '14%', right: '10%', top: 32, bottom: 52 },
     xAxis: [
       {
@@ -1959,7 +1959,7 @@ export function renderBranchTasksVolume(containerId) {
       },
       {
         type: 'value',
-        name: 'Avg days',
+        name: 'Average hours',
         position: 'top',
         nameTextStyle: { color: chartAxisLabelValue(), fontSize: 12 },
         max: maxAvg,
@@ -1994,7 +1994,7 @@ export function renderBranchTasksVolume(containerId) {
         }
       },
       {
-        name: 'Avg duration',
+        name: 'Average hours',
         type: 'line',
         xAxisIndex: 1,
         yAxisIndex: 0,
