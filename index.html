@@ -60,6 +60,22 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         <span>Team Performance</span>
       </button>
+      <div class="sidebar-settings" id="sidebar-settings">
+        <button class="nav-item nav-settings-toggle" id="sidebar-settings-toggle" type="button" aria-expanded="false" aria-controls="sidebar-settings-panel">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33h.01A1.65 1.65 0 0 0 9.93 3.1V3a2 2 0 0 1 4 0v.09c0 .66.39 1.26 1 1.51.59.24 1.27.11 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06c-.45.45-.57 1.13-.33 1.72v.11c.25.61.85 1 1.51 1H21a2 2 0 0 1 0 4h-.09c-.66 0-1.26.39-1.51 1z"/></svg>
+          <span>Settings</span>
+          <svg class="settings-menu-chevron" width="12" height="12" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+        </button>
+        <div class="sidebar-settings-panel" id="sidebar-settings-panel" hidden>
+          <label class="settings-toggle-row" for="settings-compare-toggle">
+            <span>Show comparison information</span>
+            <span class="ui-switch">
+              <input type="checkbox" id="settings-compare-toggle" />
+              <span class="ui-switch-track" aria-hidden="true"><span class="ui-switch-thumb"></span></span>
+            </span>
+          </label>
+        </div>
+      </div>
     </nav>
     <div class="sidebar-footer">
       <div class="upload-area" id="upload-area">
@@ -85,12 +101,8 @@
         <h1 class="page-title" id="page-title">Dashboard</h1>
       </div>
       <div class="header-right">
-        <button class="compare-toggle" id="compare-toggle" type="button" aria-pressed="false" title="Show comparisons">
-          <span class="compare-toggle-label">Compare</span>
-          <span class="compare-switch" aria-hidden="true"><span class="compare-thumb"></span></span>
-        </button>
         <div class="compare-details-anchor" id="compare-details-anchor" hidden>
-          <button type="button" class="compare-details-btn" id="compare-details-btn" aria-expanded="false" aria-controls="compare-context" title="Comparison date ranges (click to show or hide)">
+          <button type="button" class="compare-details-btn" id="compare-details-btn" aria-expanded="false" aria-controls="compare-context">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
           </button>
           <div class="compare-context compare-context-dropdown" id="compare-context" role="region" aria-label="Comparison date ranges" hidden></div>

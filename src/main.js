@@ -50,6 +50,7 @@ let compareDetailsHover = false;
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
+  initSettingsMenu();
   initCompareToggle();
   initCompareDetails();
   initSidebarCollapse();
@@ -224,7 +225,7 @@ function processExcelBuffer(buf) {
 // NAVIGATION
 // ==========================================
 function initNavigation() {
-  const navItems = document.querySelectorAll('.nav-item');
+  const navItems = document.querySelectorAll('.nav-item[data-tab]');
   navItems.forEach(item => {
     item.addEventListener('click', () => {
       const tab = item.dataset.tab;
@@ -774,10 +775,10 @@ function updateThemeToggleUI() {
 function initCompareToggle() {
   showComparisons = getCookie(COMPARE_COOKIE_KEY) === '1';
   updateCompareToggleUI();
-  const compareToggle = document.getElementById('compare-toggle');
+  const compareToggle = document.getElementById('settings-compare-toggle');
   if (!compareToggle) return;
-  compareToggle.addEventListener('click', () => {
-    showComparisons = !showComparisons;
+  compareToggle.addEventListener('change', () => {
+    showComparisons = Boolean(compareToggle.checked);
     setCookie(COMPARE_COOKIE_KEY, showComparisons ? '1' : '0');
     updateCompareToggleUI();
     if (dataLoaded) renderKPICards();
@@ -785,11 +786,28 @@ function initCompareToggle() {
 }
 
 function updateCompareToggleUI() {
-  const compareToggle = document.getElementById('compare-toggle');
-  if (!compareToggle) return;
-  compareToggle.classList.toggle('active', showComparisons);
-  compareToggle.setAttribute('aria-pressed', showComparisons ? 'true' : 'false');
-  compareToggle.setAttribute('title', showComparisons ? 'Hide comparisons' : 'Show comparisons');
+  const compareToggle = document.getElementById('settings-compare-toggle');
+  if (compareToggle) compareToggle.checked = showComparisons;
+}
+
+function initSettingsMenu() {
+  const toggleBtn = document.getElementById('sidebar-settings-toggle');
+  const menu = document.getElementById('sidebar-settings-panel');
+  if (!toggleBtn || !menu) return;
+
+  const syncMenuState = (open) => {
+    menu.hidden = !open;
+    toggleBtn.classList.toggle('active', open);
+    toggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  };
+
+  syncMenuState(false);
+
+  toggleBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const willOpen = menu.hidden;
+    syncMenuState(willOpen);
+  });
 }
 
 function syncCompareDropdown() {
@@ -1057,9 +1075,7 @@ function renderKPICards() {
     compareDetailsAnchor.hidden = !showComparisons;
   }
   if (compareDetailsBtn) {
-    compareDetailsBtn.title = showComparisons
-      ? getCompareContextSummaryShort()
-      : 'Available when Compare is on';
+    compareDetailsBtn.removeAttribute('title');
   }
   syncCompareDropdown();
 
