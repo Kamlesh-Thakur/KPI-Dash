@@ -1,5 +1,7 @@
 node_modules/
+server/node_modules/
 dist/
 .DS_Store
 *.local
+server/.env
 public/data/precomputed-kpi.json

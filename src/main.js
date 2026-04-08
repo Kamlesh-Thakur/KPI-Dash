@@ -29,6 +29,15 @@ import { createCalendarPicker } from './calendarPicker.js';
 import { mountCustomSelect, syncCustomSelect } from './customSelect.js';
 import { getCalendarSystem, setCalendarSystem } from './calendarPrefs.js';
 import { syncBsMonthHiddenFromGregorianYm, getNepaliMonthlyFilterDefaults } from './nepaliCalendarUi.js';
+import { apiFetch, getMe, loadApiDataset, login, setTokens, uploadWorkbookFile } from './apiClient.js';
+import {
+  canUploadData,
+  clearAuthSession,
+  getAuthState,
+  readAuthSession,
+  saveAuthSession,
+  setAuthUser
+} from './authState.js';
 
 // ==========================================
 // STATE
@@ -39,6 +48,7 @@ let currentTab = 'dashboard';
 let dataLoaded = false;
 let currentTheme = 'dark';
 let showComparisons = false;
+const USE_API_DATA = String(import.meta.env.VITE_USE_API_DATA || 'false').toLowerCase() === 'true';
 
 /** Themed calendar popover (week / day / month / range) */
 let calendarPickerApi = null;
@@ -64,6 +74,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initUpload();
   initExport();
   initMenuToggle();
+  initAuthUi();
+  updateAuthUi();
 
   // Paint KPI + charts immediately so chart loaders clear even if Excel fetch fails or errors later
   try {
@@ -72,14 +84,101 @@ document.addEventListener('DOMContentLoaded', () => {
     console.error('[init] renderAll failed', e);
   }
 
-  // Auto-load the Excel file
-  autoLoadExcel();
+  // Auto-load data source (API or static files)
+  initAuth().then(() => autoLoadExcel());
 
   // Resize handler
   window.addEventListener('resize', () => {
     resizeCharts();
   });
 });
+
+async function initAuth() {
+  if (!USE_API_DATA) return;
+  const saved = readAuthSession();
+  if (!saved?.accessToken || !saved?.refreshToken) {
+    toggleAuthOverlay(true);
+    return;
+  }
+  setTokens(saved.accessToken, saved.refreshToken);
+  try {
+    const me = await getMe();
+    setAuthUser(me.user || null);
+    updateAuthUi();
+  } catch (_err) {
+    clearAuthSession();
+    setAuthUser(null);
+    toggleAuthOverlay(true);
+  }
+}
+
+function toggleAuthOverlay(show) {
+  const overlay = document.getElementById('auth-overlay');
+  if (overlay) overlay.hidden = !show;
+}
+
+function updateAuthUi() {
+  const user = getAuthState().user;
+  const pill = document.getElementById('auth-user-pill');
+  const logoutBtn = document.getElementById('auth-logout-btn');
+  if (pill) {
+    pill.hidden = !user;
+    pill.textContent = user ? `${user.email} (${(user.roles || []).join(', ')})` : '';
+  }
+  if (logoutBtn) logoutBtn.hidden = !user;
+  if (USE_API_DATA) {
+    const uploadArea = document.getElementById('upload-area');
+    if (uploadArea) {
+      const allowed = canUploadData();
+      uploadArea.style.opacity = allowed ? '1' : '0.55';
+      uploadArea.style.cursor = allowed ? 'pointer' : 'not-allowed';
+      uploadArea.title = allowed ? 'Import Excel' : 'Only admin/analyst can upload';
+    }
+  }
+}
+
+function initAuthUi() {
+  const form = document.getElementById('auth-login-form');
+  const logoutBtn = document.getElementById('auth-logout-btn');
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('auth-email')?.value || '';
+      const password = document.getElementById('auth-password')?.value || '';
+      const errEl = document.getElementById('auth-error');
+      if (errEl) {
+        errEl.hidden = true;
+        errEl.textContent = '';
+      }
+      try {
+        const payload = await login(email, password);
+        saveAuthSession({ accessToken: payload.accessToken, refreshToken: payload.refreshToken });
+        setAuthUser(payload.user || null);
+        updateAuthUi();
+        toggleAuthOverlay(false);
+        if (dataLoaded) renderAll();
+      } catch (err) {
+        if (errEl) {
+          errEl.hidden = false;
+          errEl.textContent = err.message || 'Login failed';
+        }
+      }
+    });
+  }
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+      try {
+        await apiFetch('/auth/logout', { method: 'POST', body: JSON.stringify({}) });
+      } catch (_err) {
+        // ignore
+      }
+      clearAuthSession();
+      setAuthUser(null);
+      updateAuthUi();
+      toggleAuthOverlay(true);
+    });
+  }
+}
 
 // ==========================================
 // AUTO LOAD
@@ -123,6 +222,26 @@ async function checkPrecomputedFreshness(snapshot) {
 }
 
 async function autoLoadExcel() {
+  if (USE_API_DATA) {
+    if (!getAuthState().user) return;
+    showToast('Loading KPI data from API…', 'info');
+    try {
+      const payload = await loadApiDataset();
+      loadPrecomputedData(payload);
+      dataLoaded = true;
+      populateFilters();
+      renderAll();
+      setTimeout(() => resizeCharts(), 50);
+      showToast(
+        `Data loaded: ${formatNumber(getFilteredRawData().length)} tasks, ${formatNumber(getFilteredIncidentData().length)} incidents`,
+        'success'
+      );
+    } catch (e) {
+      console.error('[autoLoadExcel] API load failed', e);
+      showToast(`API load failed: ${e.message}`, 'error');
+    }
+    return;
+  }
   showToast('Loading KPI data…', 'info');
 
   try {
@@ -579,13 +698,28 @@ function closeFilterDrawer() {
 function initUpload() {
   const uploadArea = document.getElementById('upload-area');
   const fileInput = document.getElementById('file-input');
+  if (!uploadArea || !fileInput) return;
 
-  uploadArea.addEventListener('click', () => fileInput.click());
+  const ensureAllowed = () => {
+    if (!USE_API_DATA) return true;
+    if (canUploadData()) return true;
+    showToast('Only admin/analyst can upload data.', 'error');
+    return false;
+  };
+
+  uploadArea.addEventListener('click', () => {
+    if (!ensureAllowed()) return;
+    fileInput.click();
+  });
 
   fileInput.addEventListener('change', (e) => {
+    if (!ensureAllowed()) return;
     const file = e.target.files[0];
     if (!file) return;
-
+    if (USE_API_DATA) {
+      uploadWorkbookToApi(file);
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (evt) => {
       processExcelBuffer(evt.target.result);
@@ -599,13 +733,34 @@ function initUpload() {
   uploadArea.addEventListener('drop', (e) => {
     e.preventDefault();
     uploadArea.style.borderColor = '';
+    if (!ensureAllowed()) return;
     const file = e.dataTransfer.files[0];
     if (file) {
+      if (USE_API_DATA) {
+        uploadWorkbookToApi(file);
+        return;
+      }
       const reader = new FileReader();
       reader.onload = (evt) => processExcelBuffer(evt.target.result);
       reader.readAsArrayBuffer(file);
     }
   });
+}
+
+async function uploadWorkbookToApi(file) {
+  try {
+    showToast(`Uploading ${file.name}…`, 'info');
+    const res = await uploadWorkbookFile(file);
+    showToast(
+      res.duplicateManifest
+        ? 'Workbook already uploaded; reused existing manifest.'
+        : 'Workbook uploaded and processed.',
+      'success'
+    );
+    await autoLoadExcel();
+  } catch (err) {
+    showToast(`Upload failed: ${err.message}`, 'error');
+  }
 }
 
 // ==========================================

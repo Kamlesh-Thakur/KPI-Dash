@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:api": "npm --prefix server run dev",
+    "start:api": "npm --prefix server run start",
     "build": "vite build",
     "preview": "vite preview",
     "precompute:data": "node scripts/generate-precomputed.mjs"
