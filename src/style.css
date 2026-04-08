@@ -313,6 +313,7 @@ body {
 
 body.sidebar-collapsed .sidebar {
   width: var(--sidebar-collapsed);
+  overflow: visible;
 }
 
 body.sidebar-collapsed .main-content {
@@ -453,6 +454,11 @@ body.sidebar-collapsed .nav-item span {
   flex: 1;
 }
 
+.nav-settings-toggle > svg:first-child {
+  transition: transform var(--transition-normal);
+  transform-origin: center;
+}
+
 .nav-settings-toggle:hover {
   background: var(--bg-glass);
   color: var(--text-primary);
@@ -463,6 +469,10 @@ body.sidebar-collapsed .nav-item span {
   border-color: rgba(99, 132, 255, 0.45);
   background: rgba(99, 132, 255, 0.14);
   box-shadow: inset 3px 0 0 var(--accent-blue);
+}
+
+.nav-settings-toggle.active > svg:first-child {
+  transform: rotate(60deg);
 }
 
 .settings-menu-chevron {
@@ -477,6 +487,7 @@ body.sidebar-collapsed .nav-item span {
 
 .sidebar-settings {
   margin-top: 4px;
+  position: relative;
 }
 
 .sidebar-settings-panel {
@@ -487,6 +498,36 @@ body.sidebar-collapsed .nav-item span {
   border-radius: var(--radius-md);
   background: var(--bg-glass);
   padding: 8px;
+}
+
+body.sidebar-collapsed .sidebar-settings {
+  width: 44px;
+}
+
+body.sidebar-collapsed .nav-settings-toggle {
+  position: relative;
+  gap: 0;
+  justify-content: center;
+}
+
+body.sidebar-collapsed .nav-settings-toggle .settings-menu-chevron {
+  display: none;
+}
+
+body.sidebar-collapsed .nav-settings-toggle.active .settings-menu-chevron {
+  display: none;
+}
+
+body.sidebar-collapsed .sidebar-settings-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  margin: 0;
+  min-width: 250px;
+  max-width: min(300px, calc(100vw - 24px));
+  z-index: 220;
+  background: var(--bg-secondary);
+  box-shadow: var(--shadow-card);
 }
 
 .settings-toggle-row {

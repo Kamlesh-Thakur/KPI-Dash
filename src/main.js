@@ -791,9 +791,10 @@ function updateCompareToggleUI() {
 }
 
 function initSettingsMenu() {
+  const anchor = document.getElementById('sidebar-settings');
   const toggleBtn = document.getElementById('sidebar-settings-toggle');
   const menu = document.getElementById('sidebar-settings-panel');
-  if (!toggleBtn || !menu) return;
+  if (!anchor || !toggleBtn || !menu) return;
 
   const syncMenuState = (open) => {
     menu.hidden = !open;
@@ -807,6 +808,12 @@ function initSettingsMenu() {
     e.stopPropagation();
     const willOpen = menu.hidden;
     syncMenuState(willOpen);
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!anchor.contains(e.target)) {
+      syncMenuState(false);
+    }
   });
 }
 
