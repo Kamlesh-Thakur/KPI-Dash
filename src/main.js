@@ -57,6 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initFilters();
   initDateFilters();
   initCalendarSystemToggle();
+  initFilterDrawer();
   mountFilterCustomSelects();
   populateFilters();
   initUpload();
@@ -302,37 +303,57 @@ function initCalendarSystemToggle() {
 }
 
 function mountFilterCustomSelects() {
-  ['filter-date-mode', 'filter-by-dimension', 'filter-by-value'].forEach((id) => {
+  ['filter-date-mode', 'filter-division', 'filter-region', 'filter-cluster', 'filter-branch', 'filter-task-type'].forEach((id) => {
     const el = document.getElementById(id);
     if (el) mountCustomSelect(el);
   });
 }
 
 function initFilters() {
-  const dimEl = document.getElementById('filter-by-dimension');
-  const valEl = document.getElementById('filter-by-value');
-  if (!dimEl || !valEl) return;
+  const divisionEl = document.getElementById('filter-division');
+  const regionEl = document.getElementById('filter-region');
+  const clusterEl = document.getElementById('filter-cluster');
+  const branchEl = document.getElementById('filter-branch');
+  const taskTypeEl = document.getElementById('filter-task-type');
+  const resetBtn = document.getElementById('filter-reset-btn');
+  if (!divisionEl || !regionEl || !clusterEl || !branchEl || !taskTypeEl || !resetBtn) return;
 
-  dimEl.addEventListener('change', () => {
-    setFilter('filterBy', dimEl.value);
-    setFilter('division', '');
+  divisionEl.addEventListener('change', () => {
+    setFilter('division', divisionEl.value);
     setFilter('region', '');
+    setFilter('cluster', '');
     setFilter('branch', '');
-    setFilter('taskType', '');
     populateFilters();
     renderAll();
   });
-
-  valEl.addEventListener('change', () => {
-    const fb = getState().filters.filterBy;
-    if (!fb) return;
-    const keyMap = {
-      division: 'division',
-      region: 'region',
-      branch: 'branch',
-      taskType: 'taskType'
-    };
-    setFilter(keyMap[fb], valEl.value);
+  regionEl.addEventListener('change', () => {
+    setFilter('region', regionEl.value);
+    setFilter('cluster', '');
+    setFilter('branch', '');
+    populateFilters();
+    renderAll();
+  });
+  clusterEl.addEventListener('change', () => {
+    setFilter('cluster', clusterEl.value);
+    setFilter('branch', '');
+    populateFilters();
+    renderAll();
+  });
+  branchEl.addEventListener('change', () => {
+    setFilter('branch', branchEl.value);
+    renderAll();
+  });
+  taskTypeEl.addEventListener('change', () => {
+    setFilter('taskType', taskTypeEl.value);
+    renderAll();
+  });
+  resetBtn.addEventListener('click', () => {
+    setFilter('division', '');
+    setFilter('region', '');
+    setFilter('cluster', '');
+    setFilter('branch', '');
+    setFilter('taskType', '');
+    populateFilters();
     renderAll();
   });
 }
@@ -487,58 +508,68 @@ function monthToDate(monthValue) {
 }
 
 function populateFilters() {
-  const dimEl = document.getElementById('filter-by-dimension');
-  const valEl = document.getElementById('filter-by-value');
-  if (!dimEl || !valEl) return;
+  const divisionEl = document.getElementById('filter-division');
+  const regionEl = document.getElementById('filter-region');
+  const clusterEl = document.getElementById('filter-cluster');
+  const branchEl = document.getElementById('filter-branch');
+  const taskTypeEl = document.getElementById('filter-task-type');
+  if (!divisionEl || !regionEl || !clusterEl || !branchEl || !taskTypeEl) return;
 
   const f = getState().filters;
-  const filterBy = f.filterBy || '';
+  const rawAll = getFilteredRawDataForRange(null, null, { ...f, filterBy: '', division: '', region: '', cluster: '', branch: '', taskType: '' });
+  const unique = (rows, getter) => [...new Set(rows.map(getter).filter((v) => v && v !== 'N/A'))].sort();
+  const clusterOf = (r) => r['Cluster-1'] || r[' Cluster'] || r['Cluster'];
 
-  dimEl.value = filterBy;
+  const rowsByDivision = rawAll.filter((r) => !f.division || r['Division'] === f.division);
+  const rowsByRegion = rowsByDivision.filter((r) => !f.region || r['Region'] === f.region);
+  const rowsByCluster = rowsByRegion.filter((r) => !f.cluster || clusterOf(r) === f.cluster);
 
-  const placeholder = {
-    '': 'Select value…',
-    division: 'All divisions',
-    region: 'All regions',
-    branch: 'All branches',
-    taskType: 'All task types'
+  const setOptions = (el, label, values) => {
+    el.innerHTML = '';
+    el.appendChild(new Option(label, ''));
+    values.forEach((v) => el.appendChild(new Option(v, v)));
   };
 
-  valEl.innerHTML = '';
-  if (!filterBy) {
-    valEl.disabled = true;
-    valEl.title = 'Choose a filter type first';
-    valEl.appendChild(new Option(placeholder[''], ''));
-    syncCustomSelect(dimEl);
-    syncCustomSelect(valEl);
-    return;
-  }
+  setOptions(divisionEl, 'All divisions', unique(rawAll, (r) => r['Division']));
+  setOptions(regionEl, 'All regions', unique(rowsByDivision, (r) => r['Region']));
+  setOptions(clusterEl, 'All clusters', unique(rowsByRegion, (r) => clusterOf(r)));
+  setOptions(branchEl, 'All branches', unique(rowsByCluster, (r) => r['Branch']));
+  setOptions(taskTypeEl, 'All task types', unique(rawAll, (r) => r['Task Type']));
 
-  valEl.disabled = false;
-  valEl.title = 'Choose a value';
-  valEl.appendChild(new Option(placeholder[filterBy], ''));
+  divisionEl.value = f.division || '';
+  regionEl.value = f.region || '';
+  clusterEl.value = f.cluster || '';
+  branchEl.value = f.branch || '';
+  taskTypeEl.value = f.taskType || '';
 
-  const columnMap = {
-    division: 'Division',
-    region: 'Region',
-    branch: 'Branch',
-    taskType: 'Task Type'
-  };
-  const col = columnMap[filterBy];
-  getUniqueValues(col, 'raw').forEach((v) => {
-    valEl.appendChild(new Option(v, v));
+  [divisionEl, regionEl, clusterEl, branchEl, taskTypeEl].forEach((el) => syncCustomSelect(el));
+}
+
+function initFilterDrawer() {
+  const openBtn = document.getElementById('filter-drawer-toggle');
+  const bar = document.getElementById('header-filter-bar');
+  if (!openBtn || !bar) return;
+
+  openBtn.addEventListener('click', () => {
+    const willOpen = !bar.classList.contains('open');
+    bar.classList.toggle('open', willOpen);
+    openBtn.classList.toggle('active', willOpen);
+    openBtn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    setTimeout(() => resizeCharts(), 0);
+    setTimeout(() => resizeCharts(), 220);
   });
+}
 
-  const keyMap = {
-    division: 'division',
-    region: 'region',
-    branch: 'branch',
-    taskType: 'taskType'
-  };
-  const cur = f[keyMap[filterBy]] || '';
-  valEl.value = cur;
-  syncCustomSelect(dimEl);
-  syncCustomSelect(valEl);
+function closeFilterDrawer() {
+  const bar = document.getElementById('header-filter-bar');
+  const openBtn = document.getElementById('filter-drawer-toggle');
+  if (bar) bar.classList.remove('open');
+  if (openBtn) {
+    openBtn.classList.remove('active');
+    openBtn.setAttribute('aria-expanded', 'false');
+  }
+  setTimeout(() => resizeCharts(), 0);
+  setTimeout(() => resizeCharts(), 220);
 }
 
 // ==========================================

@@ -165,23 +165,27 @@
             <button type="button" class="week-cal-link week-cal-link--primary" id="cal-footer-today">Today</button>
           </div>
         </div>
-        <div class="filter-group filter-group--cascade" id="filter-group">
-          <select class="filter-select filter-select--modern" id="filter-by-dimension" aria-label="Filter by">
-            <option value="">Filter by</option>
-            <option value="division">Divisions</option>
-            <option value="region">Regions</option>
-            <option value="branch">Branches</option>
-            <option value="taskType">Task types</option>
-          </select>
-          <select class="filter-select filter-select--modern filter-by-value" id="filter-by-value" aria-label="Filter value" disabled title="Choose a filter type first">
-            <option value="">Select value…</option>
-          </select>
-        </div>
+        <button class="filter-drawer-toggle" id="filter-drawer-toggle" type="button" aria-label="Open filters" title="Open filters">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+          <span class="filter-drawer-toggle-text">Filters</span>
+        </button>
         <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to light mode" title="Switch to light mode">
           <span class="theme-toggle-icon" id="theme-toggle-icon" aria-hidden="true">🌙</span>
         </button>
       </div>
     </header>
+    <section class="header-filter-bar" id="header-filter-bar">
+      <div class="header-filter-bar-inner">
+        <label class="filter-drawer-field"><span>Division</span><select class="filter-select filter-select--modern" id="filter-division"><option value="">All divisions</option></select></label>
+        <label class="filter-drawer-field"><span>Region</span><select class="filter-select filter-select--modern" id="filter-region"><option value="">All regions</option></select></label>
+        <label class="filter-drawer-field"><span>Cluster</span><select class="filter-select filter-select--modern" id="filter-cluster"><option value="">All clusters</option></select></label>
+        <label class="filter-drawer-field"><span>Branch</span><select class="filter-select filter-select--modern" id="filter-branch"><option value="">All branches</option></select></label>
+        <label class="filter-drawer-field"><span>Task Type</span><select class="filter-select filter-select--modern" id="filter-task-type"><option value="">All task types</option></select></label>
+        <div class="filter-drawer-actions">
+          <button type="button" class="toolbar-btn" id="filter-reset-btn">Reset</button>
+        </div>
+      </div>
+    </section>
 
     <!-- Dashboard Tab -->
     <section class="tab-content active" id="tab-dashboard">

@@ -304,10 +304,11 @@ body {
 .main-content {
   flex: 1;
   margin-left: var(--sidebar-width);
+  margin-right: 0;
   height: 100vh;
   overflow-y: auto;
   overflow-x: hidden;
-  transition: margin-left var(--transition-slow);
+  transition: margin-left var(--transition-slow), margin-right var(--transition-slow);
 }
 
 body.sidebar-collapsed .sidebar {
@@ -316,6 +317,10 @@ body.sidebar-collapsed .sidebar {
 
 body.sidebar-collapsed .main-content {
   margin-left: var(--sidebar-collapsed);
+}
+
+body.filter-drawer-open .main-content {
+  margin-right: 0;
 }
 
 body.sidebar-collapsed .sidebar-brand {
@@ -540,6 +545,85 @@ body.sidebar-collapsed .nav-item span {
 .theme-toggle-icon {
   font-size: 0.95rem;
   line-height: 1;
+}
+
+.filter-drawer-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-primary);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.filter-drawer-toggle:hover {
+  border-color: var(--accent-blue);
+  color: var(--text-primary);
+}
+
+.filter-drawer-toggle.active {
+  color: var(--accent-blue);
+  border-color: rgba(99, 132, 255, 0.45);
+  background: var(--accent-blue-glow);
+}
+
+.header-filter-bar {
+  position: sticky;
+  top: var(--header-height);
+  z-index: 108;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border-primary);
+  background: var(--header-bg);
+  backdrop-filter: blur(14px);
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-8px);
+  transition: max-height var(--transition-normal), opacity var(--transition-normal), transform var(--transition-normal), padding var(--transition-normal);
+}
+
+.header-filter-bar.open {
+  padding: 10px 20px;
+  max-height: 220px;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.header-filter-bar-inner {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(160px, 1fr)) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.filter-drawer-field {
+  display: grid;
+  gap: 6px;
+}
+
+.filter-drawer-field > span {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.filter-drawer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 0;
+  border-top: none;
 }
 
 .filter-group {
@@ -951,6 +1035,10 @@ body.theme-light .week-cal-day--selected-day {
 }
 
 @media (max-width: 1100px) {
+  .header-filter-bar-inner {
+    grid-template-columns: repeat(2, minmax(140px, 1fr));
+  }
+
   .week-filter-wrap.visible,
   .calendar-filter-wrap.visible {
     flex-direction: column;

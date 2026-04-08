@@ -21,6 +21,7 @@ const STATE = {
     filterBy: '',
     division: '',
     region: '',
+    cluster: '',
     branch: '',
     taskType: '',
     dateMode: 'monthly',
@@ -52,6 +53,7 @@ function buildFilteredCacheKey(filters, startDate, endDate) {
     f.filterBy || '',
     f.division || '',
     f.region || '',
+    f.cluster || '',
     f.branch || '',
     f.taskType || '',
     f.dateMode || 'overall',
@@ -507,11 +509,18 @@ function applyRawDimensionFilters(data, filters) {
     out = out.filter((r) => r['Division'] === filters.division);
   } else if (fb === 'region' && filters.region) {
     out = out.filter((r) => r['Region'] === filters.region);
+  } else if (fb === 'cluster' && filters.cluster) {
+    out = out.filter((r) => (r['Cluster-1'] || r[' Cluster'] || r['Cluster']) === filters.cluster);
   } else if (fb === 'branch' && filters.branch) {
     out = out.filter((r) => r['Branch'] === filters.branch);
   } else if (fb === 'taskType' && filters.taskType) {
     out = out.filter((r) => r['Task Type'] === filters.taskType);
   }
+  if (filters.division) out = out.filter((r) => r['Division'] === filters.division);
+  if (filters.region) out = out.filter((r) => r['Region'] === filters.region);
+  if (filters.cluster) out = out.filter((r) => (r['Cluster-1'] || r[' Cluster'] || r['Cluster']) === filters.cluster);
+  if (filters.branch) out = out.filter((r) => r['Branch'] === filters.branch);
+  if (filters.taskType) out = out.filter((r) => r['Task Type'] === filters.taskType);
   return out;
 }
 
@@ -522,9 +531,15 @@ function applyIncidentDimensionFilters(data, filters) {
     out = out.filter((r) => r['Division'] === filters.division);
   } else if (fb === 'region' && filters.region) {
     out = out.filter((r) => r['Region'] === filters.region);
+  } else if (fb === 'cluster' && filters.cluster) {
+    out = out.filter((r) => (r['Cluster-1'] || r[' Cluster'] || r['Cluster']) === filters.cluster);
   } else if (fb === 'branch' && filters.branch) {
     out = out.filter((r) => (r['Branch_1'] || r['Branch']) === filters.branch);
   }
+  if (filters.division) out = out.filter((r) => r['Division'] === filters.division);
+  if (filters.region) out = out.filter((r) => r['Region'] === filters.region);
+  if (filters.cluster) out = out.filter((r) => (r['Cluster-1'] || r[' Cluster'] || r['Cluster']) === filters.cluster);
+  if (filters.branch) out = out.filter((r) => (r['Branch_1'] || r['Branch']) === filters.branch);
   return out;
 }
 
