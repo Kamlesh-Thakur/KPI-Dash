@@ -708,8 +708,9 @@ body.sidebar-collapsed .sidebar-settings-panel {
 }
 
 .header-filter-bar-inner {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(160px, 1fr)) auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 10px;
   align-items: end;
 }
@@ -717,6 +718,8 @@ body.sidebar-collapsed .sidebar-settings-panel {
 .filter-drawer-field {
   display: grid;
   gap: 6px;
+  min-width: 0;
+  flex: 0 1 auto;
 }
 
 .filter-drawer-field > span {
@@ -728,10 +731,30 @@ body.sidebar-collapsed .sidebar-settings-panel {
 .filter-drawer-actions {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: flex-end;
   gap: 8px;
   padding: 0;
   border-top: none;
+}
+
+/* Keep top filter-bar selects responsive inside grid columns. */
+.header-filter-bar .custom-select {
+  width: auto;
+  min-width: 0;
+  max-width: 13.5rem;
+}
+
+.header-filter-bar .custom-select .filter-select-trigger {
+  width: auto;
+  min-width: 9.5rem;
+  max-width: 13.5rem;
+}
+
+/* Keep Task Type stable (fits longest option like "CPE Replacement"). */
+.header-filter-bar #filter-task-type + .filter-select-trigger {
+  width: 12.5rem;
+  min-width: 12.5rem;
+  max-width: 12.5rem;
 }
 
 .filter-group {
