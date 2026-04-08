@@ -81,6 +81,9 @@ export function mountCustomSelect(selectEl) {
       label.textContent = sel ? sel.textContent : '—';
       btn.disabled = selectEl.disabled;
       btn.classList.toggle('is-disabled', selectEl.disabled);
+      const hasNonDefaultSelection = selectEl.selectedIndex > 0;
+      btn.classList.toggle('has-selection', hasNonDefaultSelection);
+      wrap.classList.toggle('has-selection', hasNonDefaultSelection);
       if (selectEl.title) btn.title = selectEl.title;
     },
     rebuildPanel() {
