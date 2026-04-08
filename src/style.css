@@ -1607,6 +1607,8 @@ body.theme-light .kpi-section-inner .kpi-card.red .kpi-value { color: #e11d48; }
 .kpi-section-inner .kpi-compare {
   grid-column: 1 / -1;
   grid-row: 4;
+  justify-self: stretch;
+  width: 100%;
   margin-top: 6px;
   justify-content: flex-end;
   gap: 3px;

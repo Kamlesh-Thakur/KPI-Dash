@@ -1199,40 +1199,40 @@ function getCompareChipLabels() {
   const mode = getState().filters?.dateMode || 'overall';
   const byMode = {
     daily: {
-      prevCode: 'DoD',
-      yoyCode: 'YoY',
+      prevCode: 'DD',
+      yoyCode: 'YY',
       prevTitle: 'Change vs the previous calendar day',
       yoyTitle: 'Change vs the same calendar day last year',
       prevPeriod: 'Prior day',
       yoyPeriod: 'Same day last year'
     },
     weekly: {
-      prevCode: 'WoW',
-      yoyCode: 'YoY',
+      prevCode: 'WW',
+      yoyCode: 'YY',
       prevTitle: 'Change vs the previous week (same length)',
       yoyTitle: 'Change vs the same dates last year',
       prevPeriod: 'Prior week',
       yoyPeriod: 'Same span last year'
     },
     monthly: {
-      prevCode: 'MoM',
-      yoyCode: 'YoY',
+      prevCode: 'MM',
+      yoyCode: 'YY',
       prevTitle: 'Change vs the previous calendar month',
       yoyTitle: 'Change vs the same calendar month last year',
       prevPeriod: 'Prior month',
       yoyPeriod: 'Same month last year'
     },
     custom: {
-      prevCode: 'Prior',
-      yoyCode: 'YoY',
+      prevCode: 'PP',
+      yoyCode: 'YY',
       prevTitle: 'Change vs the previous period of equal length',
       yoyTitle: 'Change vs the same calendar span last year',
       prevPeriod: 'Prior period',
       yoyPeriod: 'Same span last year'
     },
     overall: {
-      prevCode: 'Prior',
-      yoyCode: 'YoY',
+      prevCode: 'PP',
+      yoyCode: 'YY',
       prevTitle: 'Change vs the previous period of equal length (immediately before your data range)',
       yoyTitle: 'Change vs the same calendar span last year',
       prevPeriod: 'Prior period',
