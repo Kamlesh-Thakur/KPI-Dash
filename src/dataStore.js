@@ -348,6 +348,25 @@ export function isIncidentExcludedFromKpi(r) {
   return h > 24;
 }
 
+/** Raw Data `Duration` is days; hours = days × 24. */
+export function taskDurationHours(r) {
+  const d = parseFloat(r['Duration']);
+  if (Number.isNaN(d)) return null;
+  return d * 24;
+}
+
+/**
+ * Task is excluded from the "KPI after exclusion" pool when Exceptions indicates Delayed
+ * and task duration (hours) is strictly greater than 24 — same rule as incidents.
+ */
+export function isTaskExcludedFromKpi(r) {
+  const exc = (r['Exceptions'] || '').toString().toLowerCase();
+  if (!exc.includes('delay')) return false;
+  const h = taskDurationHours(r);
+  if (h == null) return false;
+  return h > 24;
+}
+
 export function getOverallKpiSnapshot() {
   return STATE.overallKpi;
 }

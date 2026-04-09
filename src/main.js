@@ -11,7 +11,7 @@ import {
   getFilteredRawDataForRange, getFilteredIncidentDataForRange, getDateFilterRange,
   setFilter, getUniqueValues, formatNumber,
   excelDateToJS, formatDuration, getState,
-  incidentDurationHours, isSameDayClosure, isIncidentExcludedFromKpi
+  incidentDurationHours, isSameDayClosure, isIncidentExcludedFromKpi, isTaskExcludedFromKpi
 } from './dataStore.js';
 import { formatDisplayDate, formatDisplayDateRange } from './dateDisplay.js';
 import {
@@ -951,10 +951,6 @@ function rowDurationHours(r) {
   return Number.isNaN(d) ? null : d * 24;
 }
 
-function isKpiExclusionConsidered(r) {
-  return (r['Exceptions'] || '').toString().toLowerCase().includes('consider');
-}
-
 /**
  * Task rows: Raw Data `Duration` is days (fractional); hours = days × 24. Matches Overall KPI / Raw Data BF.
  * Incident rows: `Duration_1` is hours from (Closed At − First Incident At) × 24; matches Overall KPI Incident sheet COUNTIFS on AD.
@@ -1015,6 +1011,8 @@ function toRowMetrics(rows, { incident } = {}) {
     // formatDuration expects days
     avgDurationAfterExcl = poolDurationCount ? (poolDurationHoursSum / poolDurationCount) / 24 : 0;
   } else {
+    let excluded = 0;
+    let within24InPool = 0;
     let poolDurationDaysSum = 0;
     let poolDurationCount = 0;
     for (const r of rows) {
@@ -1023,8 +1021,10 @@ function toRowMetrics(rows, { incident } = {}) {
         if (h < 4) within4h += 1;
         if (h < 24) within24h += 1;
       }
-      if (isKpiExclusionConsidered(r)) {
-        kpiExclusion += 1;
+      if (isTaskExcludedFromKpi(r)) {
+        excluded += 1;
+      } else {
+        if (h != null && h < 24) within24InPool += 1;
         const d = parseFloat(r['Duration']);
         if (!Number.isNaN(d)) {
           poolDurationDaysSum += d;
@@ -1032,7 +1032,9 @@ function toRowMetrics(rows, { incident } = {}) {
         }
       }
     }
-    kpiExclusionRate = (kpiExclusion / total) * 100;
+    kpiExclusionDenominator = total - excluded;
+    kpiExclusion = within24InPool;
+    kpiExclusionRate = kpiExclusionDenominator > 0 ? (within24InPool / kpiExclusionDenominator) * 100 : 0;
     avgDurationAfterExcl = poolDurationCount ? poolDurationDaysSum / poolDurationCount : 0;
   }
 
@@ -1108,10 +1110,10 @@ function renderKPICards() {
           <div class="kpi-change up">${formatNumber(taskM.within24h)} / ${formatNumber(total)}</div>
           ${showComparisons ? renderCompareRow(compare.tasks.within24hRate, true, compareChipLabels) : ''}
         </div>
-        <div class="kpi-card indigo" title="KPI after exclusion — Exceptions contains &quot;consider&quot;">
+        <div class="kpi-card indigo" title="Within 24h among tasks not excluded. Excluded: Exceptions contains Delayed and duration &gt; 24h.">
           <div class="kpi-label">KPI After Excl.</div>
           <div class="kpi-value">${total > 0 ? formatKpiPercent(taskM.kpiExclusionRate) : '0.00%'}</div>
-          <div class="kpi-change up">${formatNumber(taskM.kpiExclusion)} / ${formatNumber(total)}</div>
+          <div class="kpi-change up">${formatNumber(taskM.kpiExclusion)} / ${formatNumber(taskM.kpiExclusionDenominator)}</div>
           ${showComparisons ? renderCompareRow(compare.tasks.kpiExclusionRate, true, compareChipLabels) : ''}
         </div>
         <div class="kpi-card emerald" title="Same-day closure">
@@ -1126,7 +1128,7 @@ function renderKPICards() {
           <div class="kpi-change">per task</div>
           ${showComparisons ? renderCompareRow(compare.tasks.avgDuration, true, compareChipLabels) : ''}
         </div>
-        <div class="kpi-card amber" title="Average task duration after exclusion (Exceptions contains &quot;consider&quot;)">
+        <div class="kpi-card amber" title="Average task duration after exclusion (excluded: Delayed and duration &gt; 24h)">
           <div class="kpi-label">Avg Duration After Excl.</div>
           <div class="kpi-value">${formatDuration(taskM.avgDurationAfterExcl)}</div>
           <div class="kpi-change">per task</div>
