@@ -2088,17 +2088,11 @@ body.theme-light .compare-context-code {
 
 /* Branch Task Volume: one horizontal row of [Branches …] [Scope …] */
 .chart-card-toolbar--branch-controls {
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   justify-content: flex-end;
   align-items: center;
   gap: 10px;
   max-width: 100%;
-}
-
-@media (max-width: 900px) {
-  .chart-card-toolbar--branch-controls {
-    flex-wrap: wrap;
-  }
 }
 
 .chart-toolbar-group {

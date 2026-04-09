@@ -44,7 +44,11 @@ function getBranchVolumeState(containerId) {
   if (!branchTasksVolumeStateById[containerId]) {
     branchTasksVolumeStateById[containerId] = {
       showAllBranches: false,
-      consideredOnly: false
+      consideredOnly: false,
+      /** 'volume' | 'avgHours' */
+      sortBy: 'volume',
+      /** 'asc' | 'desc' */
+      sortDir: 'desc'
     };
   }
   return branchTasksVolumeStateById[containerId];
@@ -1021,12 +1025,20 @@ export function renderPriorityDist(containerId) {
   const sorted = Object.entries(prioMap).sort((a, b) => a[0].localeCompare(b[0]));
   const labels = sorted.map(s => s[0]);
   const values = sorted.map(s => s[1]);
+  const total = values.reduce((s, v) => s + v, 0);
   const colors = [COLORS.red, COLORS.amber, COLORS.blue, COLORS.green, COLORS.purple];
 
   chart.setOption({
     tooltip: {
       trigger: 'axis',
-      ...chartTooltipTheme(12)
+      ...chartTooltipTheme(12),
+      formatter: (params) => {
+        const p = params?.[0];
+        if (!p) return '';
+        const count = p.value ?? 0;
+        const pct = total > 0 ? ((count / total) * 100).toFixed(1) : '0.0';
+        return `${p.name}<br/>${formatNumber(count)} (${pct}%)`;
+      }
     },
     grid: { left: 50, right: 20, top: 10, bottom: 30 },
     xAxis: {
@@ -1050,7 +1062,19 @@ export function renderPriorityDist(containerId) {
           borderRadius: [6, 6, 0, 0]
         }
       })),
-      barWidth: 36
+      barWidth: 36,
+      label: {
+        show: true,
+        position: 'top',
+        color: chartAxisLabelValue(),
+        fontSize: 11,
+        fontWeight: 700,
+        formatter: (p) => {
+          const count = p.value || 0;
+          const pct = total > 0 ? ((count / total) * 100).toFixed(1) : '0.0';
+          return `${formatNumber(count)} (${pct}%)`;
+        }
+      }
     }],
     animationDuration: 1000
   });
@@ -1843,7 +1867,8 @@ export function renderBranchTasksVolume(containerId) {
   const el = document.getElementById(containerId);
   if (!el) return;
   const state = getBranchVolumeState(containerId);
-  const { showAllBranches, consideredOnly } = state;
+  const { showAllBranches, consideredOnly, sortBy, sortDir } = state;
+  const asc = sortDir === 'asc';
 
   el.style.removeProperty('min-height');
   el.style.removeProperty('height');
@@ -1867,6 +1892,20 @@ export function renderBranchTasksVolume(containerId) {
           <div class="chart-toolbar-category-buttons">
             <button type="button" class="chart-toggle-btn ${!consideredOnly ? 'active' : ''}" data-scope="all">All tasks</button>
             <button type="button" class="chart-toggle-btn ${consideredOnly ? 'active' : ''}" data-scope="considered">Considered</button>
+          </div>
+        </div>
+        <div class="chart-toolbar-category" role="group" aria-label="Sort branches by">
+          <span class="chart-toolbar-label">Sort by</span>
+          <div class="chart-toolbar-category-buttons">
+            <button type="button" class="chart-toggle-btn ${sortBy === 'volume' ? 'active' : ''}" data-sort="volume">Task volume</button>
+            <button type="button" class="chart-toggle-btn ${sortBy === 'avgHours' ? 'active' : ''}" data-sort="avgHours">Avg hours</button>
+          </div>
+        </div>
+        <div class="chart-toolbar-category" role="group" aria-label="Sort direction">
+          <span class="chart-toolbar-label">Order</span>
+          <div class="chart-toolbar-category-buttons">
+            <button type="button" class="chart-toggle-btn ${sortDir === 'desc' ? 'active' : ''}" data-sort-dir="desc">Descending</button>
+            <button type="button" class="chart-toggle-btn ${sortDir === 'asc' ? 'active' : ''}" data-sort-dir="asc">Ascending</button>
           </div>
         </div>
       </div>
@@ -1894,6 +1933,18 @@ export function renderBranchTasksVolume(containerId) {
       renderBranchTasksVolume(containerId);
     });
   });
+  header.querySelectorAll('[data-sort]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.sortBy = btn.dataset.sort === 'avgHours' ? 'avgHours' : 'volume';
+      renderBranchTasksVolume(containerId);
+    });
+  });
+  header.querySelectorAll('[data-sort-dir]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.sortDir = btn.dataset.sortDir === 'asc' ? 'asc' : 'desc';
+      renderBranchTasksVolume(containerId);
+    });
+  });
 
   let rows = getFilteredRawData();
   if (consideredOnly) rows = rows.filter(isRowConsideredForKpi);
@@ -1912,7 +1963,17 @@ export function renderBranchTasksVolume(containerId) {
       total: v.count,
       avgDuration: v.count ? v.durSum / v.count : 0
     }))
-    .sort((a, b) => b.total - a.total);
+    .sort((a, b) => {
+      const ah = a.avgDuration * 24;
+      const bh = b.avgDuration * 24;
+      if (sortBy === 'avgHours') {
+        if (ah !== bh) return asc ? ah - bh : bh - ah;
+        return asc ? a.total - b.total : b.total - a.total;
+      }
+      if (a.total !== b.total) return asc ? a.total - b.total : b.total - a.total;
+      if (ah !== bh) return asc ? ah - bh : bh - ah;
+      return 0;
+    });
 
   if (!showAllBranches) list = list.slice(0, 10);
 
